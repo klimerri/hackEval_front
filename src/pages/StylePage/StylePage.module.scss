@@ -1,0 +1,91 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.button {
+    background-color: $button-background;
+    color: $button-color;
+    padding: $button-border-padding;
+    font-weight: $button-font-weight;
+    font-size: $button-font-size;
+    border: none;
+    border-radius: $button-border-radius;
+    width: $button-width;
+    transition: background-color 0.3s linear;
+
+    &:hover {
+        background-color: $button-hover-background;
+    }
+}
+
+.title {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-big;
+}
+
+.subtitle {
+    font-family: $text-font-family;
+    color: $text-secondary;
+    font-size: $text-font-size-large;
+}
+
+.text {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-medium;
+}
+
+.accent {
+    font-family: $text-font-family;
+    color: $text-thirdary;
+    font-size: $text-font-size-small;
+    font-weight: 500;
+}
+
+.green {
+    font-family: $text-font-family;
+    color: $text-green;
+    font-size: $text-font-size-small;
+    font-weight: 500;
+}
+
+.yellow {
+    font-family: $text-font-family;
+    color: $text-yellow;
+    font-size: $text-font-size-small;
+    font-weight: 500;
+}
+
+.red {
+    font-family: $text-font-family;
+    color: $text-red;
+    font-size: $text-font-size-small;
+    font-weight: 500;
+}
+
+.block {
+    background-color: $form-background;
+    border-radius: $form-border-radius;
+    padding: $form-border-padding;
+    border: 1px solid $form-border-color;
+    transition: background-color 0.3s linear;
+
+    &:hover {
+        background-color: $form-hover-color;
+    }
+}
+
+.blockGreen {
+    background-color: $form-green;
+}
+
+.blockRed {
+    background-color: $form-red;
+}
+
+.blockYellow {
+    background-color: $form-yellow;
+}
