@@ -1,0 +1,32 @@
+.drawer {
+    width: 170px;
+    height: 100vh;
+    background-color: $form-background;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.button {
+    background-color: $button-background;
+    color: $button-color;
+    padding: $button-border-padding;
+    font-weight: $button-font-weight;
+    font-size: $button-font-size;
+    border: none;
+    border-radius: $button-border-radius;
+    width: $button-width;
+    transition: background-color 0.3s linear;
+
+    &:hover {
+        background-color: $button-hover-background;
+    }
+}
+
+.logo {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-large;
+    font-weight: 500;
+}
