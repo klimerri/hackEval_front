@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes} from 'react-router-dom';
 import { AuthPage } from './pages/AuthPage/AuthPage';
 import { StylePage } from './pages/StylePage/StylePage';
+import { UserPage } from './pages/UserPage/UserPage';
 import { LayoutWithDrawer } from './components/LayoutWithDrawer/LayoutWithDrawer';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
           <Route path="/login" element={<AuthPage />} />
 
           <Route path="/" element={<LayoutWithDrawer />}>
+            <Route path="/users" element={<UserPage />} />
             <Route path="/style" element={<StylePage />} />
           </Route>
         </Routes>
