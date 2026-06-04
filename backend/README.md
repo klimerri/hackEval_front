@@ -1,10 +1,11 @@
 # HackAuth backend
 
-FastAPI + SQLAlchemy 2 (async) + PostgreSQL + Redis + Celery. Implements the
-TZ in `../tz.md` end to end:
+FastAPI + SQLAlchemy 2 (async) + PostgreSQL + Redis + Celery.
 
 - регистрация / авторизация (JWT, bcrypt, роли)
-- каталог хакатонов, команд, заявок
+  - саморегистрация создаёт только участника; роли жюри назначает организатор
+- каталог хакатонов, команд, заявок (вступление по заявке, исключение, удаление)
+- уведомления (заявки, решения, изменения статуса)
 - загрузка артефактов и автоматическая проверка
   - код (README / LICENSE / deps / LOC / cyclomatic complexity / secrets)
   - документация (PDF / DOCX / Markdown)
@@ -54,10 +55,13 @@ backend/
 
 | Метод | URL | Назначение |
 | --- | --- | --- |
-| POST | `/auth/register` | регистрация |
+| POST | `/auth/register` | регистрация (всегда роль `participant`) |
 | POST | `/auth/login` | вход |
 | GET | `/auth/me` | профиль |
-| GET | `/dashboard` | статистика + мои хакатоны + анонсы |
+| GET | `/dashboard` | статистика по роли + хакатоны + анонсы |
+| GET | `/notifications` | список уведомлений + счётчик непрочитанных |
+| POST | `/notifications/{id}/read` | отметить прочитанным |
+| POST | `/notifications/read-all` | отметить все прочитанными |
 | GET | `/hackathons` | каталог |
 | GET | `/hackathons/{id}` | карточка |
 | POST | `/hackathons` | создать (организатор) |
@@ -65,17 +69,27 @@ backend/
 | GET | `/hackathons/{id}/invite` | invite link |
 | GET | `/teams` | мои команды |
 | GET | `/teams/explore` | открытые команды |
-| POST | `/teams` | создать команду + заявка |
-| POST | `/teams/{id}/join` | вступить |
+| POST | `/teams` | создать команду + заявка (участник) |
+| POST | `/teams/manual` | создать одобренную команду (организатор) |
+| PATCH | `/teams/{id}` | редактировать название/заметки (капитан) |
+| DELETE | `/teams/{id}` | удалить команду (капитан/организатор) |
+| POST | `/teams/{id}/join` | подать заявку на вступление (участник) |
+| GET | `/teams/{id}/requests` | заявки на вступление (капитан) |
+| POST | `/teams/{id}/requests/{rid}/decide` | одобрить/отклонить заявку (капитан) |
+| DELETE | `/teams/{id}/members/{uid}` | исключить участника (капитан/организатор) |
 | GET | `/teams/{id}` | карточка |
-| POST | `/teams/{id}/decision` | одобрить/отклонить (организатор) |
+| POST | `/teams/{id}/decision` | одобрить/отклонить команду (организатор) |
 | PUT | `/teams/{id}/submission` | обновить ссылки на артефакты |
 | GET | `/jury/hackathons` | хакатоны для оценки |
-| GET | `/jury/hackathons/{id}/teams` | команды для оценки |
+| GET | `/jury/hackathons/{id}/teams` | команды для оценки + сводка автопроверок |
 | PUT | `/jury/teams/{id}/score` | сохранить оценку |
-| GET | `/organizer/jury-pool` | пул экспертов |
+| GET | `/organizer/jury-pool` | пул жюри |
+| GET | `/organizer/teams` | все команды по хакатонам организатора |
+| GET | `/organizer/hackathons/{id}/jury` | назначенные жюри хакатона |
 | POST | `/organizer/hackathons/{id}/jury` | назначить жюри |
 | DELETE | `/organizer/hackathons/{id}/jury/{uid}` | снять жюри |
+| POST | `/organizer/jury/promote` | повысить участника до жюри по email |
+| POST | `/organizer/jury` | создать новый аккаунт жюри |
 | GET | `/organizer/analytics` | аналитика |
 | GET | `/results/me` | мои результаты |
 | GET | `/results/hackathons/{id}/ranking` | таблица |
