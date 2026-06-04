@@ -1,0 +1,187 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 32px;
+    box-sizing: border-box;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.title {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-big;
+}
+
+.subtitle {
+    font-family: $text-font-family;
+    color: $text-secondary;
+    font-size: $text-font-size-medium;
+}
+
+.kpi {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.kpiCard {
+    background-color: $form-background;
+    border-radius: $form-border-radius;
+    padding: $form-border-padding;
+    border: 1px solid $form-border-color;
+    border-left: 4px solid $form-border-color;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kpiOk {
+    border-left-color: $text-green;
+}
+
+.kpiWarn {
+    border-left-color: $text-yellow;
+}
+
+.kpiFail {
+    border-left-color: $text-red;
+}
+
+.kpiLabel {
+    font-family: $text-font-family;
+    color: $text-secondary;
+    font-size: $text-font-size-small;
+}
+
+.kpiValue {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-big;
+    font-weight: 600;
+}
+
+.kpiMax {
+    color: $text-secondary;
+    font-size: $text-font-size-medium;
+    font-weight: 400;
+}
+
+@media (max-width: 1100px) {
+    .kpi {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .kpi {
+        grid-template-columns: 1fr;
+    }
+}
+
+.artifacts {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sectionTitle {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-large;
+}
+
+.artifactList {
+    display: flex;
+    flex-direction: column;
+    background-color: $form-background;
+    border-radius: $form-border-radius;
+    border: 1px solid $form-border-color;
+    overflow: hidden;
+}
+
+.artifactItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid $form-border-color;
+    transition: background-color 0.3s linear;
+    cursor: pointer;
+}
+
+.artifactItem:last-child {
+    border-bottom: none;
+}
+
+.artifactItem:hover {
+    background-color: $form-hover-color;
+}
+
+.artifactDot {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 6px;
+}
+
+.statusOk {
+    background-color: $text-green;
+}
+
+.statusWarn {
+    background-color: $text-yellow;
+}
+
+.statusFail {
+    background-color: $text-red;
+}
+
+.artifactBody {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.artifactRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.artifactTitle {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-medium;
+    font-weight: 500;
+}
+
+.artifactScore {
+    font-family: $text-font-family;
+    color: $text-primary;
+    font-size: $text-font-size-medium;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.artifactMax {
+    color: $text-secondary;
+    font-size: $text-font-size-small;
+    font-weight: 400;
+}
+
+.artifactMeta {
+    font-family: $text-font-family;
+    color: $text-secondary;
+    font-size: $text-font-size-small;
+    line-height: 1.4;
+}
