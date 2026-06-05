@@ -11,7 +11,6 @@ from app.schemas.auth import TokenOut, UserLogin, UserOut, UserRegister
 
 router = APIRouter()
 
-
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) -> TokenOut:
     existing = await db.execute(select(User).where(User.email == payload.email))
@@ -33,7 +32,6 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) ->
     token = create_access_token(user.id, user.role.value)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
-
 @router.post("/login", response_model=TokenOut)
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> TokenOut:
     res = await db.execute(select(User).where(User.email == payload.email))
@@ -42,7 +40,6 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> Token
         raise HTTPException(status_code=401, detail="invalid credentials")
     token = create_access_token(user.id, user.role.value)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
-
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)) -> User:

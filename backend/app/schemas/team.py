@@ -6,13 +6,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 TeamStatusLiteral = Literal["pending", "approved", "rejected"]
 TeamMemberRoleLiteral = Literal["captain", "member"]
 
-
 class TeamCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     hackathon_id: int
     notes: str = ""
     members: list[EmailStr] = []
-
 
 class TeamMemberOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -26,7 +24,6 @@ class TeamMemberOut(BaseModel):
     @classmethod
     def _coerce(cls, v):
         return getattr(v, "value", v)
-
 
 class TeamOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -68,16 +65,13 @@ class TeamOut(BaseModel):
             return ""
         return v
 
-
 class TeamDecision(BaseModel):
     decision: TeamStatusLiteral
-
 
 class TeamAddManual(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     captain_email: EmailStr
     hackathon_id: int
-
 
 class SubmissionUpdate(BaseModel):
     github_url: str | None = None
@@ -85,15 +79,12 @@ class SubmissionUpdate(BaseModel):
     presentation_url: str | None = None
     video_url: str | None = None
 
-
 class TeamUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     notes: str | None = None
 
-
 class JoinRequestCreate(BaseModel):
     message: str = ""
-
 
 class JoinRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -116,7 +107,6 @@ class JoinRequestOut(BaseModel):
     @classmethod
     def _none_to_empty(cls, v):
         return v or ""
-
 
 class JoinRequestDecision(BaseModel):
     decision: Literal["approved", "rejected"]

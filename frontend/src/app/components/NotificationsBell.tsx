@@ -28,7 +28,7 @@ export function NotificationsBell() {
       setItems(data.items);
       setUnread(data.unread);
     } catch {
-      // silent — notifications are non-critical
+
     }
   }, []);
 
@@ -38,7 +38,6 @@ export function NotificationsBell() {
     return () => clearInterval(id);
   }, [load]);
 
-  // close on outside click
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {

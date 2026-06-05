@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification, NotificationType
 
-
 def notify(
     db: AsyncSession,
     user_id: int,
@@ -19,7 +18,6 @@ def notify(
     type: NotificationType = NotificationType.INFO,
 ) -> None:
     db.add(Notification(user_id=user_id, title=title, body=body, type=type))
-
 
 def notify_many(
     db: AsyncSession,

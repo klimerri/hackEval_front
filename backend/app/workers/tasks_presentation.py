@@ -9,7 +9,6 @@ from app.workers.helpers import ensure_check_row, finalise_submission
 
 PRES_EXTS = (".pdf", ".pptx")
 
-
 def _presentation_source(team) -> str | None:
     """Prefer an uploaded presentation file over the URL."""
     base = Path(settings.upload_dir) / f"team_{team.id}"
@@ -18,7 +17,6 @@ def _presentation_source(team) -> str | None:
         if p.exists():
             return str(p)
     return team.presentation_url
-
 
 @celery_app.task(name="app.workers.tasks_presentation.check_presentation_task", bind=True, max_retries=1)
 def check_presentation_task(self, submission_id: int) -> dict:

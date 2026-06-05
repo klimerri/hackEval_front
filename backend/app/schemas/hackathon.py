@@ -21,18 +21,15 @@ _DEFAULT_PRESENTATION_SECTIONS = [
     {"key": "contacts", "label": "Контакты", "keywords": ["контакты", "contacts"]},
 ]
 
-
 class CriterionIn(BaseModel):
     key: str = Field(..., min_length=1, max_length=64)
     label: str = Field(..., min_length=1, max_length=128)
     weight: int = Field(..., ge=0, le=100)
 
-
 class PresentationSectionIn(BaseModel):
     key: str = Field(..., min_length=1, max_length=64)
     label: str = Field(..., min_length=1, max_length=128)
     keywords: list[str] = Field(default_factory=list)
-
 
 class HackathonCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
@@ -51,7 +48,6 @@ class HackathonCreate(BaseModel):
     )
     max_team_size: int = 5
 
-
 class HackathonUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
@@ -67,7 +63,6 @@ class HackathonUpdate(BaseModel):
     jury_criteria: list[CriterionIn] | None = None
     presentation_sections: list[PresentationSectionIn] | None = None
     max_team_size: int | None = None
-
 
 class HackathonOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

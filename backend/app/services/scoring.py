@@ -9,11 +9,8 @@ from app.models.jury import JuryScore
 from app.models.submission import Submission
 from app.models.team import Team
 
-# Fixed blend of automatic checks vs expert (jury) evaluation in the final score.
-# The auto part is intentionally constant; only the jury CRITERIA are configurable.
 AUTO_SHARE = 0.4
 JURY_SHARE = 0.6
-
 
 def weighted_jury_value(scores: dict | None, criteria: list | None) -> float:
     """Weighted average of one juror's per-criterion scores (0..10)."""
@@ -34,7 +31,6 @@ def weighted_jury_value(scores: dict | None, criteria: list | None) -> float:
     vals = [float(v) for v in scores.values()]
     return sum(vals) / len(vals) if vals else 0.0
 
-
 def jury_value_for(row: JuryScore, criteria: list | None) -> float:
     """Compute a juror's value, falling back to legacy columns for old rows."""
     scores = row.scores or {
@@ -44,10 +40,8 @@ def jury_value_for(row: JuryScore, criteria: list | None) -> float:
     }
     return weighted_jury_value(scores, criteria)
 
-
 def combine_scores(auto: float, jury_avg: float) -> float:
     return round(auto * AUTO_SHARE + jury_avg * JURY_SHARE, 2)
-
 
 async def recalc_final_score(db: AsyncSession, team_id: int) -> Submission | None:
     """Combine the (fixed) auto score with the weighted jury average."""

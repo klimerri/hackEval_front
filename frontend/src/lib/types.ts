@@ -172,11 +172,11 @@ export interface DashboardStats {
   my_teams: number;
   total_submissions: number;
   pending_evaluations: number;
-  // jury
+
   assigned_hackathons: number;
   teams_to_grade: number;
   graded_by_me: number;
-  // organizer
+
   managed_hackathons: number;
   total_teams: number;
   pending_teams: number;

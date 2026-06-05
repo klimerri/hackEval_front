@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 MAX_LINT_FILES = 60
 
-# JS/TS sources linted via ESLint (see _run_eslint).
 JS_TS_EXTS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")
 
 DEP_FILES = {
@@ -66,20 +65,16 @@ SECRET_PATTERNS = [
     re.compile(r"xox[abp]-[A-Za-z0-9-]{10,}"),
 ]
 
-
 def _is_github_zip(url: str) -> bool:
     return urlparse(url).netloc.endswith("github.com") and url.endswith(".zip")
 
-
 def _is_github_repo(url: str) -> bool:
     return urlparse(url).netloc.endswith("github.com")
-
 
 def _github_zip_url(url: str) -> str:
     if url.endswith(".zip"):
         return url
     return url.rstrip("/") + "/archive/refs/heads/main.zip"
-
 
 def _fetch_archive(url: str) -> bytes | None:
     try:
@@ -90,7 +85,6 @@ def _fetch_archive(url: str) -> bytes | None:
     except Exception as exc:
         logger.warning("archive fetch failed for %s: %s", url, exc)
         return None
-
 
 def _iter_zip_files(data: bytes) -> Iterable[tuple[str, bytes]]:
     try:
@@ -107,7 +101,6 @@ def _iter_zip_files(data: bytes) -> Iterable[tuple[str, bytes]]:
                     continue
     except zipfile.BadZipFile:
         return
-
 
 def _count_loc_and_complexity(contents: list[tuple[str, bytes]]) -> tuple[int, float]:
     loc = 0
@@ -127,7 +120,7 @@ def _count_loc_and_complexity(contents: list[tuple[str, bytes]]) -> tuple[int, f
             loc += 1
         if name.endswith(".py"):
             try:
-                import radon.complexity as rc  # type: ignore
+                import radon.complexity as rc
 
                 results = rc.cc_visit(text)
                 for r in results:
@@ -138,7 +131,6 @@ def _count_loc_and_complexity(contents: list[tuple[str, bytes]]) -> tuple[int, f
     avg_cc = (cc_sum / cc_n) if cc_n else 1.0
     return loc, round(avg_cc, 2)
 
-
 def _scan_secrets(all_text: str) -> int:
     found = 0
     for pat in SECRET_PATTERNS:
@@ -146,14 +138,12 @@ def _scan_secrets(all_text: str) -> int:
             found += 1
     return found
 
-
 def _has_run_instructions(readme: str) -> bool:
     if not readme:
         return False
     text = readme.lower()
     keys = ["install", "установка", "quickstart", "getting started", "## run", "## usage", "## запуск"]
     return any(k in text for k in keys)
-
 
 def _candidate_urls(source: str) -> list[str]:
     """Build the list of archive URLs to try for a given source."""
@@ -163,21 +153,18 @@ def _candidate_urls(source: str) -> list[str]:
         base = source.rstrip("/")
         if base.endswith(".git"):
             base = base[:-4]
-        # try the common default branches
         return [
             base + "/archive/refs/heads/main.zip",
             base + "/archive/refs/heads/master.zip",
         ]
     return [source]
 
-
 def _load_archive(source: str) -> tuple[bytes | None, str]:
     """Return (archive_bytes, error). Supports local zip paths and http(s) URLs."""
-    # Local uploaded archive
     if os.path.exists(source):
         try:
             return Path(source).read_bytes(), ""
-        except Exception as exc:  # pragma: no cover - fs errors
+        except Exception as exc:
             return None, f"failed to read archive: {exc}"
     if not source.lower().startswith(("http://", "https://")):
         return None, "source is neither a local archive nor an http(s) url"
@@ -186,7 +173,6 @@ def _load_archive(source: str) -> tuple[bytes | None, str]:
         if data:
             return data, ""
     return None, "failed to fetch archive (check the URL and that the repo is public)"
-
 
 def _run_pylint(py_files: list[tuple[str, bytes]]) -> int | None:
     """Run pylint over the Python sources. Returns issue count, or None if unavailable.
@@ -228,7 +214,6 @@ def _run_pylint(py_files: list[tuple[str, bytes]]) -> int | None:
             out = proc.stdout.strip()
             if out.startswith("["):
                 return len(json.loads(out))
-            # empty/invalid stdout: distinguish "pylint not installed" from "0 issues"
             if "No module named" in (proc.stderr or ""):
                 return None
             return 0
@@ -240,7 +225,6 @@ def _run_pylint(py_files: list[tuple[str, bytes]]) -> int | None:
     except Exception as exc:
         logger.warning("pylint failed: %s", exc)
         return None
-
 
 def _run_eslint(js_files: list[tuple[str, bytes]]) -> int | None:
     """Run ESLint over the JS/TS sources. Returns issue count, or None if the
@@ -260,8 +244,6 @@ def _run_eslint(js_files: list[tuple[str, bytes]]) -> int | None:
         return None
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            # Relative names + cwd=tmp so ESLint treats the files as inside its
-            # base path (otherwise it emits a spurious "file ignored" warning).
             names: list[str] = []
             for name, data in js_files[:MAX_LINT_FILES]:
                 safe = name.replace("\\", "/").split("/")[-1]
@@ -295,12 +277,10 @@ def _run_eslint(js_files: list[tuple[str, bytes]]) -> int | None:
             if out.startswith("["):
                 report = json.loads(out)
                 return sum(r.get("errorCount", 0) + r.get("warningCount", 0) for r in report)
-            # non-JSON stdout: distinguish a broken/missing toolchain from 0 issues
             if "Cannot find module" in (proc.stderr or ""):
                 return None
             return 0
     except FileNotFoundError:
-        # node binary not installed
         return None
     except subprocess.TimeoutExpired:
         logger.warning("eslint timed out")
@@ -308,7 +288,6 @@ def _run_eslint(js_files: list[tuple[str, bytes]]) -> int | None:
     except Exception as exc:
         logger.warning("eslint failed: %s", exc)
         return None
-
 
 def run_code_check(source: str | None) -> dict:
     """Synchronous code check. Returns a dict ready to be written into CodeCheck.
@@ -370,8 +349,6 @@ def run_code_check(source: str | None) -> dict:
     secrets = _scan_secrets("\n".join(all_text_chunks))
     py_files = [(n, d) for n, d in files if n.endswith(".py")]
     js_files = [(n, d) for n, d in files if n.endswith(JS_TS_EXTS)]
-    # Lint each language with its own tool; None means that linter is unavailable
-    # (or no files of that language). Issues are summed across languages.
     py_lint = _run_pylint(py_files) if py_files else None
     js_lint = _run_eslint(js_files)
     lint_parts = [x for x in (py_lint, js_lint) if x is not None]
@@ -391,7 +368,6 @@ def run_code_check(source: str | None) -> dict:
         score += 1.0
     else:
         score -= min(2.0, secrets * 0.5)
-    # linter: full point at 0 issues, decreasing; neutral half-point if unavailable
     if not lint_available:
         score += 0.5
     elif lint_issues == 0:

@@ -19,8 +19,6 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Fallback section list (matches the model default) used when a hackathon has no
-# configured sections. Each entry: {"key", "label", "keywords": [...]}.
 DEFAULT_SECTIONS: list[dict] = [
     {"key": "problem", "label": "Проблема", "keywords": ["проблема", "problem"]},
     {"key": "solution", "label": "Решение", "keywords": ["решение", "solution"]},
@@ -30,7 +28,6 @@ DEFAULT_SECTIONS: list[dict] = [
     {"key": "team", "label": "Команда", "keywords": ["команда", "team"]},
     {"key": "contacts", "label": "Контакты", "keywords": ["контакты", "contacts"]},
 ]
-
 
 def _fetch(url: str) -> bytes | None:
     try:
@@ -42,13 +39,12 @@ def _fetch(url: str) -> bytes | None:
         logger.warning("presentation fetch failed %s: %s", url, exc)
         return None
 
-
 def _load(source: str) -> tuple[bytes | None, str]:
     """Return (bytes, error). Supports local file paths and http(s) URLs."""
     if os.path.exists(source):
         try:
             return Path(source).read_bytes(), ""
-        except Exception as exc:  # pragma: no cover - fs errors
+        except Exception as exc:
             return None, f"failed to read presentation: {exc}"
     if not source.lower().startswith(("http://", "https://")):
         return None, "source is neither a local file nor an http(s) url"
@@ -57,17 +53,15 @@ def _load(source: str) -> tuple[bytes | None, str]:
         return None, "failed to fetch presentation"
     return data, ""
 
-
 def _fmt(source: str) -> str:
     p = urlparse(source).path.lower() if "://" in source else source.lower()
     if p.endswith(".pdf"):
         return "pdf"
     return "pptx"
 
-
 def _slides_pdf(data: bytes) -> list[str]:
     try:
-        from PyPDF2 import PdfReader  # type: ignore
+        from PyPDF2 import PdfReader
 
         reader = PdfReader(io.BytesIO(data))
         return [(p.extract_text() or "") for p in reader.pages]
@@ -75,10 +69,9 @@ def _slides_pdf(data: bytes) -> list[str]:
         logger.warning("pdf slide extract failed: %s", exc)
         return []
 
-
 def _slides_pptx(data: bytes) -> list[str]:
     try:
-        from pptx import Presentation  # type: ignore
+        from pptx import Presentation
 
         prs = Presentation(io.BytesIO(data))
         out: list[str] = []
@@ -96,7 +89,6 @@ def _slides_pptx(data: bytes) -> list[str]:
         logger.warning("pptx extract failed: %s", exc)
         return []
 
-
 def _section_hits(slides_text: list[str], sections: list[dict]) -> list[str]:
     """Return the keys of the configured sections found in the slide text."""
     joined = "\n".join(slides_text).lower()
@@ -109,7 +101,6 @@ def _section_hits(slides_text: list[str], sections: list[dict]) -> list[str]:
         if key and keywords and any(k in joined for k in keywords):
             found.append(key)
     return found
-
 
 def run_presentation_check(source: str | None, sections: list[dict] | None = None) -> dict:
     """Check a presentation file/URL against a configurable section list.
@@ -143,13 +134,11 @@ def run_presentation_check(source: str | None, sections: list[dict] | None = Non
     count = len(slides)
     found = _section_hits(slides, sections)
 
-    # slide count: up to 3 points (ideal 8..15 slides)
     score = 0.0
     if 8 <= count <= 15:
         score += 3.0
     elif 5 <= count <= 20:
         score += 1.5
-    # structure coverage: up to 7 points, proportional to required sections
     if total > 0:
         score += min(7.0, 7.0 * len(found) / total)
     score = min(10.0, round(score, 2))

@@ -1,11 +1,10 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "HackAuth"
+    app_name: str = "Базис"
     app_env: str = "dev"
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
@@ -49,10 +48,8 @@ class Settings(BaseSettings):
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
-
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
 
 settings = get_settings()

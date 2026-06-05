@@ -8,13 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 from app.models.team import Team
 
-
 class SubmissionStatus(str, PyEnum):
     PENDING = "pending"
     EVALUATING = "evaluating"
     EVALUATED = "evaluated"
     ERROR = "error"
-
 
 class CheckStatus(str, PyEnum):
     PENDING = "pending"
@@ -22,7 +20,6 @@ class CheckStatus(str, PyEnum):
     DONE = "done"
     ERROR = "error"
     SKIPPED = "skipped"
-
 
 class Submission(Base):
     __tablename__ = "submissions"
@@ -51,7 +48,6 @@ class Submission(Base):
     presentation_check: Mapped["PresentationCheck | None"] = relationship(back_populates="submission", uselist=False, cascade="all,delete-orphan")
     video_check: Mapped["VideoCheck | None"] = relationship(back_populates="submission", uselist=False, cascade="all,delete-orphan")
 
-
 class _CheckBase:
     id: Mapped[int] = mapped_column(primary_key=True)
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"), unique=True, nullable=False)
@@ -66,7 +62,6 @@ class _CheckBase:
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-
 class CodeCheck(_CheckBase, Base):
     __tablename__ = "code_checks"
     submission: Mapped[Submission] = relationship(back_populates="code_check")
@@ -79,7 +74,6 @@ class CodeCheck(_CheckBase, Base):
     lint_issues: Mapped[int] = mapped_column(default=0)
     secrets_found: Mapped[int] = mapped_column(default=0)
 
-
 class DocCheck(_CheckBase, Base):
     __tablename__ = "doc_checks"
     submission: Mapped[Submission] = relationship(back_populates="doc_check")
@@ -90,14 +84,12 @@ class DocCheck(_CheckBase, Base):
     image_count: Mapped[int] = mapped_column(default=0)
     fmt: Mapped[str] = mapped_column(String(16), default="")
 
-
 class PresentationCheck(_CheckBase, Base):
     __tablename__ = "presentation_checks"
     submission: Mapped[Submission] = relationship(back_populates="presentation_check")
     slide_count: Mapped[int] = mapped_column(default=0)
     sections_found: Mapped[list[str]] = mapped_column(JSONB, default=list)
     fmt: Mapped[str] = mapped_column(String(16), default="")
-
 
 class VideoCheck(_CheckBase, Base):
     __tablename__ = "video_checks"

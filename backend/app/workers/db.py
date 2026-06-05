@@ -12,11 +12,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-import app.models  # noqa: F401  ensure models registered
+import app.models
 
 _sync_engine = create_engine(settings.sync_database_url, pool_pre_ping=True, future=True)
 SyncSessionLocal = sessionmaker(bind=_sync_engine, autoflush=False, expire_on_commit=False)
-
 
 @contextmanager
 def session_scope() -> Iterator[Session]:

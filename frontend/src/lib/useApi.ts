@@ -49,7 +49,7 @@ export function useApi<T>(path: string | null, deps: unknown[] = []): UseApiResu
     return () => {
       cancelled.current = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [path, tick, ...deps]);
 
   return { data, error, loading, reload: () => setTick((t) => t + 1) };

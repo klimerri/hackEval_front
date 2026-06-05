@@ -78,7 +78,6 @@ export function OrganizerPage() {
 
   const current = hackathons?.find((h) => h.id === selectedHackathon);
 
-  // teams across the organizer's hackathons (real team shape: members + status)
   const { data: allOrgTeams, reload: reloadTeamsForHack } = useApi<OrgTeam[]>(
     "/organizer/teams",
   );
@@ -87,7 +86,6 @@ export function OrganizerPage() {
     [allOrgTeams, current?.id],
   );
 
-  // actual jury assigned to this hackathon (not the global pool)
   const { data: assignedJury, reload: reloadAssignedJury } = useApi<AssignedJury[]>(
     current ? `/organizer/hackathons/${current.id}/jury` : null,
     [current?.id],

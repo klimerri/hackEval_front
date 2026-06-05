@@ -12,7 +12,6 @@ export function LeaderboardPage() {
   const { data: hackathons } = useApi<Hackathon[]>("/hackathons");
   const [selected, setSelected] = useState<number | "">("");
 
-  // default to the first hackathon once loaded
   useEffect(() => {
     if (selected === "" && hackathons && hackathons.length > 0) {
       setSelected(hackathons[0].id);

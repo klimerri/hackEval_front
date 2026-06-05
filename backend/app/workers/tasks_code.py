@@ -7,14 +7,12 @@ from app.services.code_check import run_code_check
 from app.workers.db import session_scope
 from app.workers.helpers import ensure_check_row, finalise_submission
 
-
 def _code_source(team) -> str | None:
     """Prefer an uploaded archive over the Git URL."""
     archive = Path(settings.upload_dir) / f"team_{team.id}" / "code.zip"
     if archive.exists():
         return str(archive)
     return team.github_url
-
 
 @celery_app.task(name="app.workers.tasks_code.check_code_task", bind=True, max_retries=1)
 def check_code_task(self, submission_id: int) -> dict:

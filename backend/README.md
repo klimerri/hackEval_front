@@ -1,4 +1,4 @@
-# HackAuth backend
+# Базис backend
 
 FastAPI + SQLAlchemy 2 (async) + PostgreSQL + Redis + Celery.
 

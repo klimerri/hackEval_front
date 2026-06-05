@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  IconTrophy as Trophy,
   IconMail as Mail,
   IconUser as User,
   IconKey as KeyRound,
@@ -63,10 +62,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-8 bg-blue-600 text-white text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 backdrop-blur-sm">
-            <Trophy size={32} />
-          </div>
-          <h1 className="text-2xl font-bold">HackAuth Automation</h1>
+          <h1 className="text-2xl font-bold">Базис</h1>
           <p className="text-blue-100 mt-2">Система автоматической проверки решений</p>
         </div>
 

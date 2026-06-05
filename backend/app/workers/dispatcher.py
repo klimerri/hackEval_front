@@ -8,14 +8,12 @@ from app.workers.tasks_video import check_video_task
 
 logger = logging.getLogger(__name__)
 
-
 CHECK_TASKS = {
     "code": check_code_task,
     "docs": check_docs_task,
     "presentation": check_presentation_task,
     "video": check_video_task,
 }
-
 
 async def dispatch_checks(
     team_id: int, submission_id: int, only: set[str] | None = None
@@ -29,7 +27,6 @@ async def dispatch_checks(
     for name in targets:
         CHECK_TASKS[name].delay(submission_id)
     logger.info("dispatched checks %s for submission=%s", sorted(targets), submission_id)
-
 
 def dispatch_judge(submission_id: int) -> None:
     judge_submission_task.delay(submission_id)

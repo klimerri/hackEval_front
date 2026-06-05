@@ -6,10 +6,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
 
-
 class Base(DeclarativeBase):
     pass
-
 
 engine = create_async_engine(
     settings.database_url,
@@ -26,7 +24,6 @@ AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     autoflush=False,
 )
 
-
 @asynccontextmanager
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:
@@ -35,7 +32,6 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
-
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:

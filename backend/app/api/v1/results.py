@@ -29,7 +29,6 @@ from app.services.scoring import recalc_final_score
 
 router = APIRouter()
 
-
 def _submission_out(s: Submission) -> SubmissionOut:
     def _code(c: CodeCheck | None) -> CodeCheckOut | None:
         if not c:
@@ -66,7 +65,6 @@ def _submission_out(s: Submission) -> SubmissionOut:
         video_check=_vid(s.video_check),
     )
 
-
 @router.get("/me", response_model=list[SubmissionOut])
 async def my_results(
     db: AsyncSession = Depends(get_db),
@@ -97,7 +95,6 @@ async def my_results(
             )
         out.append(item)
     return out
-
 
 @router.get("/hackathons/{hackathon_id}/ranking", response_model=list[TeamResultOut])
 async def hackathon_ranking(
@@ -153,7 +150,6 @@ async def hackathon_ranking(
             row.rank = i
     return out
 
-
 @router.get("/hackathons/{hackathon_id}/winners", response_model=list[HackathonWinnerOut])
 async def hackathon_winners(
     hackathon_id: int,
@@ -166,7 +162,6 @@ async def hackathon_winners(
         HackathonWinnerOut(rank=i + 1, team_id=r.team_id, team_name=r.team_name, final_score=r.final_score)
         for i, r in enumerate(top)
     ]
-
 
 @router.post("/submissions/{submission_id}/rerun", response_model=SubmissionOut)
 async def rerun_checks(

@@ -9,7 +9,6 @@ from app.workers.helpers import ensure_check_row, finalise_submission
 
 DOC_EXTS = (".pdf", ".docx", ".md")
 
-
 def _docs_source(team) -> str | None:
     """Prefer an uploaded documentation file over the URL."""
     base = Path(settings.upload_dir) / f"team_{team.id}"
@@ -18,7 +17,6 @@ def _docs_source(team) -> str | None:
         if p.exists():
             return str(p)
     return team.docs_url
-
 
 @celery_app.task(name="app.workers.tasks_docs.check_docs_task", bind=True, max_retries=1)
 def check_docs_task(self, submission_id: int) -> dict:

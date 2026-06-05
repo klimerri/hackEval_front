@@ -29,8 +29,7 @@ VERDICT_CE = "CE"
 
 _IS_POSIX = os.name == "posix"
 if _IS_POSIX:
-    import resource  # noqa: F401  POSIX-only
-
+    import resource
 
 def _preexec(child_stderr_path: str):
     def _pre():
@@ -49,7 +48,6 @@ def _preexec(child_stderr_path: str):
 
     return _pre
 
-
 def _compile(cmd: list[str], cwd: str, timeout: int = 30) -> tuple[bool, str]:
     try:
         out = subprocess.run(
@@ -67,14 +65,11 @@ def _compile(cmd: list[str], cwd: str, timeout: int = 30) -> tuple[bool, str]:
         return False, (out.stderr or out.stdout or "compile error")[:2000]
     return True, ""
 
-
 def _normalize(s: str) -> str:
     return s.replace("\r\n", "\n").rstrip()
 
-
 def _verdict_for_output(expected: str, actual: str) -> str:
     return VERDICT_OK if _normalize(expected) == _normalize(actual) else VERDICT_WA
-
 
 def _max_rss_mb() -> float:
     if not _IS_POSIX:
@@ -84,7 +79,6 @@ def _max_rss_mb() -> float:
         return round(usage.ru_maxrss / 1024.0, 2)
     except Exception:
         return 0.0
-
 
 def judge_submission(
     code: str,

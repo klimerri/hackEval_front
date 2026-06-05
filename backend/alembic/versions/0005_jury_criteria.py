@@ -9,25 +9,20 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
 revision = "0005_jury_criteria"
 down_revision = "0004_code_lint_issues"
 branch_labels = None
 depends_on = None
 
-# Plain JSON string — passed as a *bound value* (not inlined into SQL text) to
-# avoid SQLAlchemy treating the colons inside it as bind parameters.
 _DEFAULT_CRITERIA = (
     '[{"key":"design","label":"Дизайн и UX","weight":34},'
     '{"key":"pitch","label":"Питч и идея","weight":33},'
     '{"key":"complexity","label":"Техническая сложность","weight":33}]'
 )
 
-
 def _has_column(bind, table: str, column: str) -> bool:
     insp = sa.inspect(bind)
     return any(c["name"] == column for c in insp.get_columns(table))
-
 
 def upgrade() -> None:
     bind = op.get_bind()
@@ -55,7 +50,6 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("'{}'::jsonb"),
         )
-
 
 def downgrade() -> None:
     bind = op.get_bind()

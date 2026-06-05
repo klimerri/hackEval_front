@@ -17,26 +17,22 @@ from app.schemas.organizer import AssignedJuryOut, JuryCreateIn, JuryPromoteIn
 
 router = APIRouter()
 
-
 @router.get("/jury-pool", response_model=list[dict])
 async def jury_pool(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_organizer),
 ) -> list[dict]:
-    # Only actual jury can be assigned — organizers must not appear in the pool.
     rows = (await db.execute(select(User).where(User.role == UserRole.JURY))).scalars().all()
     return [
         {"id": u.id, "name": u.name, "email": u.email, "role": u.role.value, "company": u.company, "specialization": u.specialization}
         for u in rows
     ]
 
-
 async def _ensure_owned_hackathon(db: AsyncSession, hackathon_id: int, user: User) -> Hackathon:
     h = (await db.execute(select(Hackathon).where(Hackathon.id == hackathon_id))).scalar_one_or_none()
     if not h or h.organizer_id != user.id:
         raise HTTPException(status_code=404, detail="hackathon not found")
     return h
-
 
 @router.get("/hackathons/{hackathon_id}/jury", response_model=list[AssignedJuryOut])
 async def list_assigned_jury(
@@ -60,7 +56,6 @@ async def list_assigned_jury(
         for u in rows
     ]
 
-
 @router.post("/jury/promote", response_model=UserOut, status_code=201)
 async def promote_to_jury(
     payload: JuryPromoteIn,
@@ -80,7 +75,6 @@ async def promote_to_jury(
     await db.commit()
     await db.refresh(target)
     return UserOut.model_validate(target)
-
 
 @router.post("/jury", response_model=UserOut, status_code=201)
 async def create_jury(
@@ -108,7 +102,6 @@ async def create_jury(
     await db.refresh(new_jury)
     return UserOut.model_validate(new_jury)
 
-
 @router.post("/hackathons/{hackathon_id}/jury", status_code=201)
 async def assign_jury(
     hackathon_id: int,
@@ -130,7 +123,6 @@ async def assign_jury(
     await db.commit()
     return {"id": ja.id, "hackathon_id": hackathon_id, "user_id": payload.user_id}
 
-
 @router.delete("/hackathons/{hackathon_id}/jury/{user_id}", status_code=204)
 async def unassign_jury(
     hackathon_id: int,
@@ -143,7 +135,6 @@ async def unassign_jury(
     if ja:
         await db.delete(ja)
         await db.commit()
-
 
 @router.get("/teams", response_model=list[dict])
 async def organizer_teams(
@@ -187,7 +178,6 @@ async def organizer_teams(
             }
         )
     return result
-
 
 @router.get("/analytics", response_model=dict)
 async def analytics(

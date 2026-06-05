@@ -50,12 +50,10 @@ without restriction.
 GOOD_APP = '''"""Task tracker core."""
 from dataclasses import dataclass, field
 
-
 @dataclass
 class Task:
     title: str
     done: bool = False
-
 
 @dataclass
 class Tracker:
@@ -72,7 +70,6 @@ class Tracker:
     def pending(self) -> list[Task]:
         return [t for t in self.tasks if not t.done]
 
-
 def main() -> None:
     tracker = Tracker()
     tracker.add("write docs")
@@ -80,13 +77,11 @@ def main() -> None:
     tracker.complete(0)
     print(f"pending: {len(tracker.pending())}")
 
-
 if __name__ == "__main__":
     main()
 '''
 
 GOOD_TEST = '''from src.app import Tracker
-
 
 def test_pending():
     t = Tracker()
@@ -96,16 +91,12 @@ def test_pending():
     assert len(t.pending()) == 1
 '''
 
-# Fake credentials for the bad fixture are assembled from fragments so this
-# generator's own source does not trip the secret scanner — only the produced
-# archive contains the contiguous patterns the scanner is meant to detect.
 _FAKE_SECRETS = (
     'AWS_KEY = "' + "AKIA" + 'IOSFODNN7EXAMPLE"\n'
     'API_KEY = "' + "api_key = " + '1234567890abcdef1234"\n'
     'password = "' + "super" + 'secret123"'
 )
 
-# Bad: no README/LICENSE/deps, secrets, unused imports, high complexity, bad style.
 BAD_MAIN = '''import os
 import sys
 import json
@@ -144,7 +135,6 @@ def g( y ):
 print(f(1,2,3,4,5))
 '''
 
-
 _PARA = (
     "Система предназначена для автоматического учёта и оценки решений команд. "
     "Она принимает артефакты, выполняет проверки и формирует итоговый рейтинг. "
@@ -165,18 +155,15 @@ GOOD_DOCS = (
 
 BAD_DOCS = "# Заметки\n\nПроект почти готов. Допишем позже.\n"
 
-
 def _write_zip(path: Path, files: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         for name, content in files.items():
             z.writestr(name, content)
 
-
 def _write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
-
 
 def main() -> None:
     _write_zip(
@@ -204,7 +191,6 @@ def main() -> None:
         f"  {SAMPLES / 'good.zip'}\n  {SAMPLES / 'bad.zip'}\n"
         f"  {SAMPLES / 'good_docs.md'}\n  {SAMPLES / 'bad_docs.md'}"
     )
-
 
 if __name__ == "__main__":
     main()

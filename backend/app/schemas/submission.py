@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 SubmissionStatusLiteral = Literal["pending", "evaluating", "evaluated", "error"]
 CheckStatusLiteral = Literal["pending", "running", "done", "error", "skipped"]
 
-
 class CodeCheckOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: str
@@ -26,7 +25,6 @@ class CodeCheckOut(BaseModel):
     def _coerce(cls, v):
         return getattr(v, "value", v)
 
-
 class DocCheckOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: str
@@ -44,7 +42,6 @@ class DocCheckOut(BaseModel):
     def _coerce(cls, v):
         return getattr(v, "value", v)
 
-
 class PresentationCheckOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: str
@@ -58,7 +55,6 @@ class PresentationCheckOut(BaseModel):
     @classmethod
     def _coerce(cls, v):
         return getattr(v, "value", v)
-
 
 class VideoCheckOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -76,7 +72,6 @@ class VideoCheckOut(BaseModel):
     @classmethod
     def _coerce(cls, v):
         return getattr(v, "value", v)
-
 
 class SubmissionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -99,9 +94,7 @@ class SubmissionOut(BaseModel):
     def _coerce_status(cls, v):
         return getattr(v, "value", v)
 
-
 class JuryScoreIn(BaseModel):
-    # per-criterion scores keyed by criterion key, each 0..10
     scores: dict[str, int] = Field(default_factory=dict)
     comment: str = ""
 
@@ -109,7 +102,6 @@ class JuryScoreIn(BaseModel):
     @classmethod
     def _clamp(cls, v: dict) -> dict:
         return {str(k): max(0, min(10, int(val))) for k, val in (v or {}).items()}
-
 
 class JuryScoreOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -120,7 +112,6 @@ class JuryScoreOut(BaseModel):
     scores: dict[str, int] = Field(default_factory=dict)
     comment: str
 
-
 class TeamResultOut(BaseModel):
     team_id: int
     team_name: str
@@ -130,7 +121,6 @@ class TeamResultOut(BaseModel):
     jury_score: float | None
     final_score: float
     rank: int | None
-
 
 class HackathonWinnerOut(BaseModel):
     rank: int

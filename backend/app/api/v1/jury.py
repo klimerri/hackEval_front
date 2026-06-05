@@ -16,7 +16,6 @@ from app.services.scoring import recalc_final_score
 
 router = APIRouter()
 
-
 def _checks_summary(sub: Submission | None) -> dict | None:
     """Compact auto-check breakdown for the jury panel (per TZ §6)."""
     if sub is None:
@@ -63,7 +62,6 @@ def _checks_summary(sub: Submission | None) -> dict | None:
         },
     }
 
-
 @router.get("/hackathons", response_model=list[dict])
 async def my_jury_hackathons(
     db: AsyncSession = Depends(get_db),
@@ -97,7 +95,6 @@ async def my_jury_hackathons(
             }
         )
     return result
-
 
 @router.get("/hackathons/{hackathon_id}/teams", response_model=list[dict])
 async def list_teams_for_jury(
@@ -152,7 +149,6 @@ async def list_teams_for_jury(
         )
     return result
 
-
 @router.put("/teams/{team_id}/score", response_model=JuryScoreOut)
 async def save_score(
     team_id: int,
@@ -172,7 +168,6 @@ async def save_score(
     if existing:
         existing.scores = scores
         existing.comment = payload.comment
-        # keep legacy columns roughly in sync for back-compat
         existing.design = int(scores.get("design", 0))
         existing.pitch = int(scores.get("pitch", 0))
         existing.complexity = int(scores.get("complexity", 0))

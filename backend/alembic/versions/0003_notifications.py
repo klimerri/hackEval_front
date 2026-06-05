@@ -9,13 +9,10 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
-# revision identifiers, used by Alembic.
 revision = '0003_notifications'
 down_revision = '0002_team_join_requests'
 branch_labels = None
 depends_on = None
-
 
 def upgrade() -> None:
     notification_type = postgresql.ENUM(
@@ -44,7 +41,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
     op.create_index(op.f('ix_notifications_read'), 'notifications', ['read'], unique=False)
-
 
 def downgrade() -> None:
     op.drop_index(op.f('ix_notifications_read'), table_name='notifications')

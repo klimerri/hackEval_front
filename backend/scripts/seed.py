@@ -29,12 +29,10 @@ from app.models.submission import (
 from app.models.team import Team, TeamMember, TeamMemberRole, TeamStatus
 from app.models.user import User, UserRole
 
-
 HACKATHONS = [
     {
         "title": "AI Innovation Hack 2026",
         "description": "Создание инновационных решений на базе генеративного ИИ для бизнеса.",
-        # currently ongoing (started 2 days ago) so artifact uploads are allowed
         "date_offset_days": -2,
         "duration_days": 7,
         "prize_pool": "500 000 ₽",
@@ -74,10 +72,7 @@ HACKATHONS = [
     },
 ]
 
-
-# Demo credentials — configurable via env so no fixed login is hardcoded in source.
 DEMO_PASSWORD = os.environ.get("SEED_PASSWORD", "password")
-
 
 async def get_or_create_user(db: AsyncSession, name: str, email: str, role: UserRole, password: str = DEMO_PASSWORD) -> User:
     res = await db.execute(select(User).where(User.email == email))
@@ -94,7 +89,6 @@ async def get_or_create_user(db: AsyncSession, name: str, email: str, role: User
     await db.flush()
     return user
 
-
 async def main() -> None:
     now = datetime.now(timezone.utc)
     async with AsyncSessionLocal() as db:
@@ -108,7 +102,6 @@ async def main() -> None:
         jury3 = await get_or_create_user(db, "Alex Kuznetsov", "alex@jury.com", UserRole.JURY)
         jury3.company = "Yandex"
         jury3.specialization = "ML"
-        # Dedicated reviewer account for checking teams (per request).
         reviewer = await get_or_create_user(db, "Maria Reviewer", "reviewer@jury.com", UserRole.JURY)
         reviewer.company = "Sber"
         reviewer.specialization = "QA / Review"
@@ -117,17 +110,12 @@ async def main() -> None:
         captain2 = await get_or_create_user(db, "Sarah J.", "sarah@team.com", UserRole.PARTICIPANT)
         captain3 = await get_or_create_user(db, "Mike R.", "mike@team.com", UserRole.PARTICIPANT)
         await db.flush()
-        # Persist demo users now so newly added accounts appear even when the
-        # rest of the seed is skipped on an already-seeded database.
         await db.commit()
 
-        # Idempotent fixups on the earliest hackathon (also runs on re-seed).
         first_hack = (await db.execute(select(Hackathon).order_by(Hackathon.id))).scalars().first()
         if first_hack:
-            # rename legacy title 2024 -> 2026
             if "2024" in (first_hack.title or ""):
                 first_hack.title = first_hack.title.replace("2024", "2026")
-            # keep the first hackathon currently ongoing so uploads are testable
             now_ts = datetime.now(timezone.utc)
             first_hack.start_date = now_ts - timedelta(days=2)
             first_hack.end_date = now_ts + timedelta(days=5)
@@ -351,7 +339,6 @@ async def main() -> None:
 
         await db.commit()
         print("seed: done")
-
 
 if __name__ == "__main__":
     asyncio.run(main())

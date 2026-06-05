@@ -60,8 +60,6 @@ export function TeamPage() {
   const my = myTeams ?? [];
   const exp = explore ?? [];
 
-  // Хакатоны, в которых участник уже состоит в команде — в них нельзя вступить
-  // во вторую команду, поэтому такие команды не показываем в поиске.
   const myHackathonIds = new Set(my.map((t) => t.hackathon_id));
 
   const filteredExplore = exp
@@ -233,7 +231,7 @@ export function TeamPage() {
     setBusy(true);
     try {
       await api.put<Team>(`/teams/${teamId}/submission`, {
-        // when an archive/file is the source, don't overwrite the corresponding URL
+
         github_url: team?.has_archive ? null : f.github.trim() || null,
         docs_url: team?.has_doc_file ? null : f.docs.trim() || null,
         presentation_url: team?.has_presentation_file ? null : f.presentation.trim() || null,
@@ -518,7 +516,7 @@ export function TeamPage() {
                 ? new Date() > new Date(hack.submission_deadline)
                 : false;
               const notStarted = hack ? new Date() < new Date(hack.start_date) : false;
-              // uploads allowed only while the hackathon is ongoing
+
               const uploadLocked = deadlinePassed || notStarted;
               const hasArtifacts = !!(
                 team.github_url ||
@@ -712,7 +710,7 @@ export function TeamPage() {
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Артефакты решения
                       </p>
-                      {/* Источник кода: ЛИБО архив, ЛИБО ссылка на репозиторий */}
+
                       {team.has_archive ? (
                         <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
                           <div className="flex items-center justify-between gap-3">
@@ -782,7 +780,6 @@ export function TeamPage() {
                         </>
                       )}
 
-                      {/* Документация: ЛИБО файл, ЛИБО ссылка */}
                       {team.has_doc_file ? (
                         <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
                           <div className="flex items-center justify-between gap-3">
@@ -850,7 +847,7 @@ export function TeamPage() {
                           </div>
                         </>
                       )}
-                      {/* Презентация: ЛИБО файл, ЛИБО ссылка */}
+
                       {team.has_presentation_file ? (
                         <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
                           <div className="flex items-center justify-between gap-3">
@@ -918,7 +915,7 @@ export function TeamPage() {
                           </div>
                         </>
                       )}
-                      {/* Скринкаст: ЛИБО файл, ЛИБО ссылка */}
+
                       {team.has_video_file ? (
                         <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
                           <div className="flex items-center justify-between gap-3">

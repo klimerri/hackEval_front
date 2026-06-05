@@ -10,7 +10,6 @@ from app.schemas.notification import NotificationList, NotificationOut
 
 router = APIRouter()
 
-
 @router.get("", response_model=NotificationList)
 async def list_notifications(
     db: AsyncSession = Depends(get_db),
@@ -33,7 +32,6 @@ async def list_notifications(
     ).scalar() or 0
     return NotificationList(unread=unread, items=[NotificationOut.model_validate(r) for r in rows])
 
-
 @router.post("/{notification_id}/read", response_model=NotificationOut)
 async def mark_read(
     notification_id: int,
@@ -53,7 +51,6 @@ async def mark_read(
     await db.commit()
     await db.refresh(n)
     return NotificationOut.model_validate(n)
-
 
 @router.post("/read-all", status_code=204)
 async def mark_all_read(

@@ -25,7 +25,6 @@ from app.schemas.algorithm import (
 
 router = APIRouter()
 
-
 def _task_out(t: AlgorithmTask) -> AlgorithmTaskOut:
     return AlgorithmTaskOut(
         id=t.id,
@@ -39,7 +38,6 @@ def _task_out(t: AlgorithmTask) -> AlgorithmTaskOut:
         test_count=len(t.tests or []),
     )
 
-
 @router.get("/tasks", response_model=list[AlgorithmTaskOut])
 async def list_tasks(
     hackathon_id: int | None = None,
@@ -51,7 +49,6 @@ async def list_tasks(
         q = q.where(AlgorithmTask.hackathon_id == hackathon_id)
     rows = (await db.execute(q.order_by(AlgorithmTask.id.desc()))).scalars().all()
     return [_task_out(t) for t in rows]
-
 
 @router.post("/tasks", response_model=AlgorithmTaskOut, status_code=201)
 async def create_task(
@@ -80,7 +77,6 @@ async def create_task(
     ).scalar_one()
     return _task_out(task)
 
-
 @router.get("/tasks/{task_id}", response_model=AlgorithmTaskOut)
 async def get_task(
     task_id: int,
@@ -95,7 +91,6 @@ async def get_task(
     if not task:
         raise HTTPException(status_code=404, detail="task not found")
     return _task_out(task)
-
 
 @router.post("/submissions", response_model=AlgorithmSubmissionOut, status_code=201)
 async def submit(
@@ -130,7 +125,6 @@ async def submit(
     ).scalar_one()
     return _submission_out(sub)
 
-
 @router.get("/submissions/{submission_id}", response_model=AlgorithmSubmissionOut)
 async def get_submission(
     submission_id: int,
@@ -150,7 +144,6 @@ async def get_submission(
         raise HTTPException(status_code=403, detail="forbidden")
     return _submission_out(sub)
 
-
 @router.get("/submissions/mine", response_model=list[AlgorithmSubmissionOut])
 async def my_submissions(
     task_id: int | None = None,
@@ -167,7 +160,6 @@ async def my_submissions(
     q = q.order_by(AlgorithmSubmission.id.desc())
     rows = (await db.execute(q)).scalars().unique().all()
     return [_submission_out(s) for s in rows]
-
 
 def _submission_out(s: AlgorithmSubmission) -> AlgorithmSubmissionOut:
     return AlgorithmSubmissionOut(

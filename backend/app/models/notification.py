@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 from app.models.user import User
 
-
 class NotificationType(str, PyEnum):
     JOIN_REQUEST = "join_request"
     JOIN_DECISION = "join_decision"
@@ -15,7 +14,6 @@ class NotificationType(str, PyEnum):
     TEAM_REMOVED = "team_removed"
     KICKED = "kicked"
     INFO = "info"
-
 
 class Notification(Base):
     __tablename__ = "notifications"

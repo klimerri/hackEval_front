@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from app.workers.db import session_scope
 from sqlalchemy.orm import Session
 
-
 def ensure_check_row(db: Session, model, submission_id: int):
     """Get-or-create the singleton check row for a submission."""
     obj = db.query(model).filter(model.submission_id == submission_id).one_or_none()
@@ -16,7 +15,6 @@ def ensure_check_row(db: Session, model, submission_id: int):
         db.commit()
         db.refresh(obj)
     return obj
-
 
 def finalise_submission(submission_id: int) -> None:
     """If all 4 checks are done, mark the submission evaluated and compute auto score."""

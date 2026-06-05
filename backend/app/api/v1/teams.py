@@ -39,15 +39,12 @@ from app.services.notify import notify, notify_many
 
 router = APIRouter()
 
-
 def _archive_path(team_id: int) -> Path:
     return Path(settings.upload_dir) / f"team_{team_id}" / "code.zip"
-
 
 DOC_EXTS = (".pdf", ".docx", ".md")
 PRES_EXTS = (".pdf", ".pptx")
 VIDEO_EXTS = (".mp4", ".mov", ".webm", ".mkv", ".avi")
-
 
 def _doc_file_path(team_id: int) -> Path | None:
     """Return the uploaded documentation file for a team, if any."""
@@ -58,7 +55,6 @@ def _doc_file_path(team_id: int) -> Path | None:
             return p
     return None
 
-
 def _presentation_file_path(team_id: int) -> Path | None:
     """Return the uploaded presentation file for a team, if any."""
     base = Path(settings.upload_dir) / f"team_{team_id}"
@@ -68,7 +64,6 @@ def _presentation_file_path(team_id: int) -> Path | None:
             return p
     return None
 
-
 def _video_file_path(team_id: int) -> Path | None:
     """Return the uploaded video (screencast) file for a team, if any."""
     base = Path(settings.upload_dir) / f"team_{team_id}"
@@ -77,7 +72,6 @@ def _video_file_path(team_id: int) -> Path | None:
         if p.exists():
             return p
     return None
-
 
 def _team_out(team: Team) -> TeamOut:
     return TeamOut(
@@ -109,7 +103,6 @@ def _team_out(team: Team) -> TeamOut:
         ],
     )
 
-
 def _join_request_out(req: TeamJoinRequest) -> JoinRequestOut:
     return JoinRequestOut(
         id=req.id,
@@ -123,7 +116,6 @@ def _join_request_out(req: TeamJoinRequest) -> JoinRequestOut:
         user_email=req.user.email if req.user else "",
     )
 
-
 async def _check_user_in_hackathon(db: AsyncSession, user_id: int, hackathon_id: int) -> bool:
     """Check if user is already a member of any team in this hackathon."""
     result = await db.execute(
@@ -132,7 +124,6 @@ async def _check_user_in_hackathon(db: AsyncSession, user_id: int, hackathon_id:
         .where(Team.hackathon_id == hackathon_id, TeamMember.user_id == user_id)
     )
     return result.scalar_one_or_none() is not None
-
 
 @router.get("", response_model=list[TeamOut])
 async def list_my_teams(
@@ -147,7 +138,6 @@ async def list_my_teams(
     )
     rows = (await db.execute(q)).scalars().all()
     return [_team_out(t) for t in rows]
-
 
 @router.get("/explore", response_model=list[TeamOut])
 async def explore_teams(
@@ -164,7 +154,6 @@ async def explore_teams(
         (await db.execute(select(TeamMember.team_id).where(TeamMember.user_id == user.id))).scalars().all()
     )
     return [_team_out(t) for t in rows if t.id not in my_team_ids and t.status == TeamStatus.APPROVED]
-
 
 @router.post("", response_model=TeamOut, status_code=201)
 async def create_team(
@@ -206,7 +195,6 @@ async def create_team(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/manual", response_model=TeamOut, status_code=201)
 async def create_team_manual(
@@ -262,7 +250,6 @@ async def create_team_manual(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/{team_id}/join", response_model=JoinRequestOut, status_code=201)
 async def request_join_team(
@@ -320,7 +307,6 @@ async def request_join_team(
     await db.refresh(request, attribute_names=["user"])
     return _join_request_out(request)
 
-
 @router.get("/{team_id}/requests", response_model=list[JoinRequestOut])
 async def list_join_requests(
     team_id: int,
@@ -352,7 +338,6 @@ async def list_join_requests(
         )
     ).scalars().all()
     return [_join_request_out(r) for r in requests]
-
 
 @router.post("/{team_id}/requests/{request_id}/decide", response_model=JoinRequestOut)
 async def decide_join_request(
@@ -424,7 +409,6 @@ async def decide_join_request(
     await db.refresh(request, attribute_names=["user"])
     return _join_request_out(request)
 
-
 @router.get("/{team_id}", response_model=TeamOut)
 async def get_team(
     team_id: int,
@@ -439,7 +423,6 @@ async def get_team(
     if not team:
         raise HTTPException(status_code=404, detail="team not found")
     return _team_out(team)
-
 
 @router.patch("/{team_id}", response_model=TeamOut)
 async def update_team(
@@ -489,7 +472,6 @@ async def update_team(
     ).scalar_one()
     return _team_out(team)
 
-
 @router.post("/{team_id}/decision", response_model=TeamOut)
 async def decide_team(
     team_id: int,
@@ -534,7 +516,6 @@ async def decide_team(
     ).scalar_one()
     return _team_out(team)
 
-
 @router.delete("/{team_id}", status_code=204)
 async def delete_team(
     team_id: int,
@@ -569,7 +550,6 @@ async def delete_team(
     )
     await db.delete(team)
     await db.commit()
-
 
 @router.delete("/{team_id}/members/{member_user_id}", response_model=TeamOut)
 async def remove_member(
@@ -617,7 +597,6 @@ async def remove_member(
     ).scalar_one()
     return _team_out(team)
 
-
 async def _assert_can_submit(db: AsyncSession, team_id: int, user: User) -> tuple[Team, Hackathon]:
     """Common guard for artifact submission: member + approved + before deadline."""
     team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
@@ -634,13 +613,11 @@ async def _assert_can_submit(db: AsyncSession, team_id: int, user: User) -> tupl
     if team.status != TeamStatus.APPROVED:
         raise HTTPException(status_code=400, detail="team not approved")
     now = datetime.now(timezone.utc)
-    # Uploads are allowed only while the hackathon is ongoing (registration is not).
     if now < hack.start_date:
         raise HTTPException(status_code=400, detail="hackathon has not started yet")
     if now > hack.submission_deadline:
         raise HTTPException(status_code=400, detail="submission deadline passed")
     return team, hack
-
 
 async def _ensure_submission(db: AsyncSession, team_id: int) -> tuple[Submission, bool]:
     """Return (submission, created). `created` is True on first submission."""
@@ -655,7 +632,6 @@ async def _ensure_submission(db: AsyncSession, team_id: int) -> tuple[Submission
         return sub, True
     return sub, False
 
-
 @router.put("/{team_id}/submission", response_model=TeamOut)
 async def update_submission(
     team_id: int,
@@ -666,30 +642,24 @@ async def update_submission(
     team, _hack = await _assert_can_submit(db, team_id, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(team, field, value)
-    # A team uses EITHER a Git URL OR an uploaded archive — providing a repo URL
-    # drops any previously uploaded archive so there is a single code source.
     if team.github_url:
         archive = _archive_path(team_id)
         if archive.exists():
             archive.unlink()
-    # Same rule for documentation: a link drops a previously uploaded doc file.
     if team.docs_url:
         doc = _doc_file_path(team_id)
         if doc:
             doc.unlink()
-    # Same rule for the presentation: a link drops a previously uploaded file.
     if team.presentation_url:
         pres = _presentation_file_path(team_id)
         if pres:
             pres.unlink()
-    # Same rule for the screencast: a link drops a previously uploaded video.
     if team.video_url:
         vid = _video_file_path(team_id)
         if vid:
             vid.unlink()
     await db.commit()
     sub, created = await _ensure_submission(db, team_id)
-    # Re-run only the checks whose artifact was provided (all on first submission).
     only: set[str] | None
     if created:
         only = None
@@ -714,7 +684,6 @@ async def update_submission(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/{team_id}/submission/archive", response_model=TeamOut)
 async def upload_archive(
@@ -745,14 +714,12 @@ async def upload_archive(
     team_dir.mkdir(parents=True, exist_ok=True)
     (team_dir / "code.zip").write_bytes(data)
 
-    # Using an archive ⇒ drop the Git URL so there is a single code source.
     team.github_url = None
     await db.commit()
 
     sub, created = await _ensure_submission(db, team_id)
     from app.workers.dispatcher import dispatch_checks
 
-    # only re-run the code check (all checks on first submission)
     await dispatch_checks(team_id, sub.id, None if created else {"code"})
     team = (
         await db.execute(
@@ -760,7 +727,6 @@ async def upload_archive(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.delete("/{team_id}/submission/archive", response_model=TeamOut)
 async def delete_archive(
@@ -779,7 +745,6 @@ async def delete_archive(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/{team_id}/submission/docs", response_model=TeamOut)
 async def upload_docs(
@@ -800,7 +765,6 @@ async def upload_docs(
     data = await file.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise HTTPException(status_code=400, detail=f"file exceeds {settings.max_upload_mb} MB")
-    # light magic-byte validation
     if ext == ".pdf" and not data.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="file is not a valid PDF")
     if ext == ".docx" and data[:4] != b"PK\x03\x04":
@@ -808,20 +772,17 @@ async def upload_docs(
 
     team_dir = Path(settings.upload_dir) / f"team_{team_id}"
     team_dir.mkdir(parents=True, exist_ok=True)
-    # remove any previous doc file (different extension) then write the new one
     existing = _doc_file_path(team_id)
     if existing:
         existing.unlink()
     (team_dir / f"docs{ext}").write_bytes(data)
 
-    # using an uploaded doc ⇒ drop the docs URL (single source)
     team.docs_url = None
     await db.commit()
 
     sub, created = await _ensure_submission(db, team_id)
     from app.workers.dispatcher import dispatch_checks
 
-    # only re-run the documentation check (all checks on first submission)
     await dispatch_checks(team_id, sub.id, None if created else {"docs"})
     team = (
         await db.execute(
@@ -829,7 +790,6 @@ async def upload_docs(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.delete("/{team_id}/submission/docs", response_model=TeamOut)
 async def delete_docs(
@@ -848,7 +808,6 @@ async def delete_docs(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/{team_id}/submission/presentation", response_model=TeamOut)
 async def upload_presentation(
@@ -869,7 +828,6 @@ async def upload_presentation(
     data = await file.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise HTTPException(status_code=400, detail=f"file exceeds {settings.max_upload_mb} MB")
-    # light magic-byte validation (PDF: %PDF, PPTX: zip container PK\x03\x04)
     if ext == ".pdf" and not data.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="file is not a valid PDF")
     if ext == ".pptx" and data[:4] != b"PK\x03\x04":
@@ -877,20 +835,17 @@ async def upload_presentation(
 
     team_dir = Path(settings.upload_dir) / f"team_{team_id}"
     team_dir.mkdir(parents=True, exist_ok=True)
-    # remove any previous presentation file (different extension) then write new
     existing = _presentation_file_path(team_id)
     if existing:
         existing.unlink()
     (team_dir / f"presentation{ext}").write_bytes(data)
 
-    # using an uploaded file ⇒ drop the presentation URL (single source)
     team.presentation_url = None
     await db.commit()
 
     sub, created = await _ensure_submission(db, team_id)
     from app.workers.dispatcher import dispatch_checks
 
-    # only re-run the presentation check (all checks on first submission)
     await dispatch_checks(team_id, sub.id, None if created else {"presentation"})
     team = (
         await db.execute(
@@ -898,7 +853,6 @@ async def upload_presentation(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.delete("/{team_id}/submission/presentation", response_model=TeamOut)
 async def delete_presentation(
@@ -917,7 +871,6 @@ async def delete_presentation(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.post("/{team_id}/submission/video", response_model=TeamOut)
 async def upload_video(
@@ -941,20 +894,17 @@ async def upload_video(
 
     team_dir = Path(settings.upload_dir) / f"team_{team_id}"
     team_dir.mkdir(parents=True, exist_ok=True)
-    # remove any previous video file (different extension) then write the new one
     existing = _video_file_path(team_id)
     if existing:
         existing.unlink()
     (team_dir / f"video{ext}").write_bytes(data)
 
-    # using an uploaded file ⇒ drop the video URL (single source)
     team.video_url = None
     await db.commit()
 
     sub, created = await _ensure_submission(db, team_id)
     from app.workers.dispatcher import dispatch_checks
 
-    # only re-run the video check (all checks on first submission)
     await dispatch_checks(team_id, sub.id, None if created else {"video"})
     team = (
         await db.execute(
@@ -962,7 +912,6 @@ async def upload_video(
         )
     ).scalar_one()
     return _team_out(team)
-
 
 @router.delete("/{team_id}/submission/video", response_model=TeamOut)
 async def delete_video(

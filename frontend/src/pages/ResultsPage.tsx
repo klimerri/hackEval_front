@@ -35,7 +35,7 @@ export function ResultsPage() {
     try {
       await api.post(`/results/submissions/${id}/rerun`);
       toast.success("Проверки перезапущены, ожидаем результат...");
-      // checks run asynchronously — poll until this submission settles
+
       let settled = false;
       for (let i = 0; i < 15; i++) {
         await new Promise((r) => setTimeout(r, 2000));
@@ -47,7 +47,7 @@ export function ResultsPage() {
             break;
           }
         } catch {
-          // keep polling
+
         }
       }
       reload();

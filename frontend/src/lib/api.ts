@@ -86,7 +86,7 @@ async function requestForm<T>(path: string, formData: FormData, auth = true): Pr
     const token = getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
   }
-  // Intentionally do NOT set Content-Type: the browser adds the multipart boundary.
+
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   const res = await fetch(url, { method: 'POST', body: formData, headers });
   if (res.status === 204) return undefined as unknown as T;

@@ -11,12 +11,10 @@ from app.models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
-
 class TokenError(str, Enum):
     MISSING = "missing token"
     INVALID = "invalid token"
     USER_NOT_FOUND = "user not found"
-
 
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
@@ -43,7 +41,6 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=TokenError.USER_NOT_FOUND.value)
     return user
 
-
 def require_role(*roles: UserRole):
     async def _check(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:
@@ -51,7 +48,6 @@ def require_role(*roles: UserRole):
         return user
 
     return _check
-
 
 require_organizer = require_role(UserRole.ORGANIZER)
 require_jury = require_role(UserRole.JURY, UserRole.ORGANIZER)

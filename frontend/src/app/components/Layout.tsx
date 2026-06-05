@@ -51,7 +51,7 @@ export function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden">
-      {/* Mobile overlay */}
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -59,7 +59,6 @@ export function Layout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 lg:translate-x-0",
@@ -68,10 +67,7 @@ export function Layout() {
       >
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-2 text-blue-600 font-bold text-xl">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-              <Trophy size={20} />
-            </div>
-            <span>HackAuth</span>
+            <span>Базис</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -117,9 +113,8 @@ export function Layout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
+
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
@@ -129,8 +124,7 @@ export function Layout() {
               <Menu size={20} />
             </button>
             <div className="hidden sm:flex items-center gap-2 text-gray-900 font-bold">
-              <Trophy size={18} className="text-blue-600" />
-              <span>HackAuth</span>
+              <span>Базис</span>
             </div>
           </div>
 
@@ -152,7 +146,6 @@ export function Layout() {
           </div>
         </header>
 
-        {/* Scrollable area */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
           <Outlet />
         </main>

@@ -18,13 +18,11 @@ BASE = os.getenv("SMOKE_BASE", "http://localhost:8000")
 EMAIL = os.getenv("SMOKE_EMAIL", "smoke@hackauth.com")
 PASSWORD = os.getenv("SMOKE_PASSWORD", "smokepass123")
 
-
 def _ok(label: str, cond: bool, extra: str = "") -> None:
     status = "PASS" if cond else "FAIL"
     print(f"[{status}] {label}{(' — ' + extra) if extra else ''}")
     if not cond:
         sys.exit(1)
-
 
 async def main() -> None:
     async with httpx.AsyncClient(base_url=BASE, timeout=30.0) as c:
@@ -98,7 +96,6 @@ async def main() -> None:
             )
 
         print("ALL OK")
-
 
 if __name__ == "__main__":
     asyncio.run(main())

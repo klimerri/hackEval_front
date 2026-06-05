@@ -78,7 +78,6 @@ export function HackathonDetailPage() {
     }
   };
 
-
   if (loading) return <div className="text-gray-400">Загрузка...</div>;
   if (error) return <div className="text-red-500">Ошибка: {error}</div>;
   if (!hackathon) return null;

@@ -21,13 +21,11 @@ _ANNOUNCEMENTS = [
     ("Хакатон AI Innovation Hack 2024", "До дедлайна подачи проектов осталось 2 дня."),
 ]
 
-
 def _announcements() -> list[AnnouncementOut]:
     return [
         AnnouncementOut(id=i + 1, title=title, body=body, created_at=datetime.now(timezone.utc))
         for i, (title, body) in enumerate(_ANNOUNCEMENTS)
     ]
-
 
 async def _participant_dashboard(db: AsyncSession, user: User) -> DashboardOut:
     active = await db.execute(
@@ -72,7 +70,6 @@ async def _participant_dashboard(db: AsyncSession, user: User) -> DashboardOut:
         pending_evaluations=pending,
     )
     return DashboardOut(role="participant", stats=stats, my_hackathons=rows, announcements=_announcements())
-
 
 async def _jury_dashboard(db: AsyncSession, user: User) -> DashboardOut:
     hack_ids = (
@@ -120,7 +117,6 @@ async def _jury_dashboard(db: AsyncSession, user: User) -> DashboardOut:
         pending_evaluations=max(0, total_teams - total_graded),
     )
     return DashboardOut(role="jury", stats=stats, my_hackathons=rows, announcements=_announcements())
-
 
 async def _organizer_dashboard(db: AsyncSession, user: User) -> DashboardOut:
     hacks = (
@@ -173,7 +169,6 @@ async def _organizer_dashboard(db: AsyncSession, user: User) -> DashboardOut:
         jury_total=jury_total,
     )
     return DashboardOut(role="organizer", stats=stats, my_hackathons=rows, announcements=_announcements())
-
 
 @router.get("", response_model=DashboardOut)
 async def dashboard(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> DashboardOut:

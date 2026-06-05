@@ -17,7 +17,6 @@ import sys
 
 from app.services.doc_check import run_doc_check
 
-
 def main() -> int:
     if len(sys.argv) != 2:
         print(__doc__)
@@ -27,7 +26,6 @@ def main() -> int:
     result = run_doc_check(source)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("status") == "done" else 1
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

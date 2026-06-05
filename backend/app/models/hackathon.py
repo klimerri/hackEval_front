@@ -7,26 +7,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
-
 class HackathonStatus(str, PyEnum):
     DRAFT = "draft"
     ACTIVE = "active"
     FINISHED = "finished"
 
-
-# Configurable JURY criteria (the organizer can add/remove/rename them and set
-# weights). The automatic checks are fixed and are NOT part of this list.
-# Default mirrors the previous behaviour (equal weights).
 DEFAULT_JURY_CRITERIA: list[dict] = [
     {"key": "design", "label": "Дизайн и UX", "weight": 34},
     {"key": "pitch", "label": "Питч и идея", "weight": 33},
     {"key": "complexity", "label": "Техническая сложность", "weight": 33},
 ]
 
-
-# Configurable presentation structure: the organizer can add/remove/rename the
-# sections a pitch deck must cover. Each section is matched by any of its
-# keywords (case-insensitive substring) against the slide text.
 DEFAULT_PRESENTATION_SECTIONS: list[dict] = [
     {"key": "problem", "label": "Проблема", "keywords": ["проблема", "problem"]},
     {"key": "solution", "label": "Решение", "keywords": ["решение", "solution"]},
@@ -36,7 +27,6 @@ DEFAULT_PRESENTATION_SECTIONS: list[dict] = [
     {"key": "team", "label": "Команда", "keywords": ["команда", "team"]},
     {"key": "contacts", "label": "Контакты", "keywords": ["контакты", "contacts"]},
 ]
-
 
 class Hackathon(Base):
     __tablename__ = "hackathons"

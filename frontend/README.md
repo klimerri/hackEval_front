@@ -1,4 +1,4 @@
-# HackAuth — frontend
+# Базис — frontend
 
 React SPA (Vite + TypeScript + Tailwind + shadcn/ui) для сервиса автоматической
 оценки решений команд на хакатонах.

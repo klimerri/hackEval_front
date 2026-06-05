@@ -21,12 +21,9 @@ logger = logging.getLogger(__name__)
 
 MIN_WORDS = 800
 
-# Stems (substring match) so inflected Russian forms also count, e.g.
-# "развёртыванию", "эксплуатации", "установка".
 DESC_KEYS = ["описани", "обзор", "overview", "introduction", "system description"]
 DEPLOY_KEYS = ["развёрт", "разверт", "deployment", "deploy", "install", "установ"]
 USAGE_KEYS = ["эксплуатац", "использован", "usage", "operation", "how to run", "запуск"]
-
 
 def _fetch(url: str) -> bytes | None:
     try:
@@ -38,13 +35,12 @@ def _fetch(url: str) -> bytes | None:
         logger.warning("docs fetch failed %s: %s", url, exc)
         return None
 
-
 def _load(source: str) -> tuple[bytes | None, str]:
     """Return (bytes, error). Supports local file paths and http(s) URLs."""
     if os.path.exists(source):
         try:
             return Path(source).read_bytes(), ""
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:
             return None, f"failed to read file: {exc}"
     if not source.lower().startswith(("http://", "https://")):
         return None, "source is neither a local file nor an http(s) url"
@@ -52,7 +48,6 @@ def _load(source: str) -> tuple[bytes | None, str]:
     if not data:
         return None, "failed to fetch docs"
     return data, ""
-
 
 def _format_from_source(source: str) -> str:
     path = urlparse(source).path.lower() if "://" in source else source.lower()
@@ -62,10 +57,9 @@ def _format_from_source(source: str) -> str:
         return "docx"
     return "md"
 
-
 def _extract_pdf(data: bytes) -> tuple[str, int]:
     try:
-        from PyPDF2 import PdfReader  # type: ignore
+        from PyPDF2 import PdfReader
 
         reader = PdfReader(io.BytesIO(data))
         text = "\n".join((p.extract_text() or "") for p in reader.pages)
@@ -80,10 +74,9 @@ def _extract_pdf(data: bytes) -> tuple[str, int]:
         logger.warning("pdf extract failed: %s", exc)
         return "", 0
 
-
 def _extract_docx(data: bytes) -> tuple[str, int]:
     try:
-        from docx import Document  # type: ignore
+        from docx import Document
 
         doc = Document(io.BytesIO(data))
         text = "\n".join(p.text for p in doc.paragraphs)
@@ -96,7 +89,6 @@ def _extract_docx(data: bytes) -> tuple[str, int]:
         logger.warning("docx extract failed: %s", exc)
         return "", 0
 
-
 def _extract_md(data: bytes) -> tuple[str, int]:
     try:
         text = data.decode("utf-8", errors="ignore")
@@ -107,11 +99,9 @@ def _extract_md(data: bytes) -> tuple[str, int]:
     )
     return text, images
 
-
 def _has_any(text: str, keys: list[str]) -> bool:
     t = text.lower()
     return any(k in t for k in keys)
-
 
 def _skipped(msg: str, fmt: str = "") -> dict:
     return {
@@ -125,7 +115,6 @@ def _skipped(msg: str, fmt: str = "") -> dict:
         "fmt": fmt,
         "message": msg,
     }
-
 
 def run_doc_check(source: str | None) -> dict:
     if not source:
@@ -147,7 +136,6 @@ def run_doc_check(source: str | None) -> dict:
     has_deploy = _has_any(text, DEPLOY_KEYS)
     has_usage = _has_any(text, USAGE_KEYS)
 
-    # required sections: 2 points each
     score = 0.0
     if has_desc:
         score += 2.0
@@ -155,12 +143,10 @@ def run_doc_check(source: str | None) -> dict:
         score += 2.0
     if has_usage:
         score += 2.0
-    # volume: up to 2 points
     if words >= MIN_WORDS:
         score += 2.0
     elif words > 0:
         score += round(2.0 * (words / MIN_WORDS), 2)
-    # images / diagrams: up to 2 points
     if images >= 2:
         score += 2.0
     elif images == 1:

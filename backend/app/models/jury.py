@@ -9,7 +9,6 @@ from app.models.hackathon import Hackathon
 from app.models.team import Team
 from app.models.user import User
 
-
 class JuryAssignment(Base):
     __tablename__ = "jury_assignments"
 
@@ -23,16 +22,13 @@ class JuryAssignment(Base):
 
     __table_args__ = (UniqueConstraint("hackathon_id", "user_id", name="uq_jury_per_hackathon"),)
 
-
 class JuryScore(Base):
     __tablename__ = "jury_scores"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
     jury_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    # Per-criterion scores keyed by criterion key, e.g. {"design": 8, "pitch": 7}.
     scores: Mapped[dict] = mapped_column(JSONB, default=dict)
-    # Legacy fixed columns (kept for back-compat / fallback).
     design: Mapped[int] = mapped_column(default=0)
     pitch: Mapped[int] = mapped_column(default=0)
     complexity: Mapped[int] = mapped_column(default=0)

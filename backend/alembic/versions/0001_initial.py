@@ -16,7 +16,6 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
     op.create_table(
         "users",
@@ -258,7 +257,6 @@ def upgrade() -> None:
         sa.Column("output", sa.Text(), nullable=False, server_default=""),
         sa.Column("log", sa.Text(), nullable=False, server_default=""),
     )
-
 
 def downgrade() -> None:
     for tbl in [

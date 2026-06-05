@@ -12,10 +12,8 @@ VERDICT_PRIORITY = {
     "ML": 5,
 }
 
-
 def _worse(a: str, b: str) -> str:
     return a if VERDICT_PRIORITY.get(a, 99) >= VERDICT_PRIORITY.get(b, 99) else b
-
 
 @celery_app.task(name="app.workers.tasks_judge.judge_submission_task", bind=True, max_retries=1)
 def judge_submission_task(self, algorithm_submission_id: int) -> dict:

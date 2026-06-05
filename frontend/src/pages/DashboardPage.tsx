@@ -78,7 +78,6 @@ export function DashboardPage() {
         <p className="text-gray-500">Быстрый доступ к ключевым разделам платформы.</p>
       </div>
 
-      {/* Quick actions instead of raw statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {actions.map((a) => {
           const Icon = a.icon;

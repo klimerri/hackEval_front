@@ -2,7 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-
 class NotificationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -21,7 +20,6 @@ class NotificationOut(BaseModel):
     @classmethod
     def _none_to_empty(cls, v):
         return v or ""
-
 
 class NotificationList(BaseModel):
     unread: int

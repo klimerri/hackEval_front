@@ -8,23 +8,19 @@ from app.core.database import Base
 from app.models.hackathon import Hackathon
 from app.models.user import User
 
-
 class TeamStatus(str, PyEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
 
-
 class TeamMemberRole(str, PyEnum):
     CAPTAIN = "captain"
     MEMBER = "member"
-
 
 class JoinRequestStatus(str, PyEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
-
 
 class Team(Base):
     __tablename__ = "teams"
@@ -54,7 +50,6 @@ class Team(Base):
 
     __table_args__ = (UniqueConstraint("hackathon_id", "name", name="uq_team_per_hackathon"),)
 
-
 class TeamMember(Base):
     __tablename__ = "team_members"
 
@@ -76,7 +71,6 @@ class TeamMember(Base):
     user: Mapped[User] = relationship()
 
     __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_member_per_team"),)
-
 
 class TeamJoinRequest(Base):
     __tablename__ = "team_join_requests"

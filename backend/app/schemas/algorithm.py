@@ -6,18 +6,15 @@ from pydantic import BaseModel, ConfigDict, field_validator
 AlgoLangLiteral = Literal["python", "cpp", "java"]
 VerdictLiteral = Literal["OK", "WA", "TL", "ML", "RE", "CE", "PENDING", "RUNNING"]
 
-
 class AlgorithmTestIn(BaseModel):
     input_data: str
     expected_output: str
     sample: bool = False
 
-
 class AlgorithmTestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     sample: bool
-
 
 class AlgorithmTaskCreate(BaseModel):
     hackathon_id: int
@@ -27,7 +24,6 @@ class AlgorithmTaskCreate(BaseModel):
     memory_limit_mb: int = 128
     language: AlgoLangLiteral = "python"
     tests: list[AlgorithmTestIn] = []
-
 
 class AlgorithmTaskOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -46,12 +42,10 @@ class AlgorithmTaskOut(BaseModel):
     def _coerce_lang(cls, v):
         return getattr(v, "value", v)
 
-
 class AlgorithmSubmissionIn(BaseModel):
     task_id: int
     code: str
     language: AlgoLangLiteral = "python"
-
 
 class AlgorithmSubmissionTestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -67,7 +61,6 @@ class AlgorithmSubmissionTestOut(BaseModel):
     @classmethod
     def _coerce_v(cls, v):
         return getattr(v, "value", v)
-
 
 class AlgorithmSubmissionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -86,7 +79,6 @@ class AlgorithmSubmissionOut(BaseModel):
     @classmethod
     def _coerce_lv(cls, v):
         return getattr(v, "value", v)
-
 
 class JuryAssignIn(BaseModel):
     user_id: int

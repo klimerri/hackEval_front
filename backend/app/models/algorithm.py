@@ -8,12 +8,10 @@ from app.core.database import Base
 from app.models.hackathon import Hackathon
 from app.models.user import User
 
-
 class AlgorithmLanguage(str, PyEnum):
     PYTHON = "python"
     CPP = "cpp"
     JAVA = "java"
-
 
 class Verdict(str, PyEnum):
     OK = "OK"
@@ -24,7 +22,6 @@ class Verdict(str, PyEnum):
     CE = "CE"
     PENDING = "PENDING"
     RUNNING = "RUNNING"
-
 
 class AlgorithmTask(Base):
     __tablename__ = "algorithm_tasks"
@@ -50,7 +47,6 @@ class AlgorithmTask(Base):
     tests: Mapped[list["AlgorithmTest"]] = relationship(back_populates="task", cascade="all,delete-orphan")
     submissions: Mapped[list["AlgorithmSubmission"]] = relationship(back_populates="task", cascade="all,delete-orphan")
 
-
 class AlgorithmTest(Base):
     __tablename__ = "algorithm_tests"
 
@@ -61,7 +57,6 @@ class AlgorithmTest(Base):
     sample: Mapped[bool] = mapped_column(default=False)
 
     task: Mapped[AlgorithmTask] = relationship(back_populates="tests")
-
 
 class AlgorithmSubmission(Base):
     __tablename__ = "algorithm_submissions"
@@ -92,7 +87,6 @@ class AlgorithmSubmission(Base):
     task: Mapped[AlgorithmTask] = relationship(back_populates="submissions")
     user: Mapped[User] = relationship()
     results: Mapped[list["AlgorithmSubmissionTest"]] = relationship(back_populates="submission", cascade="all,delete-orphan")
-
 
 class AlgorithmSubmissionTest(Base):
     __tablename__ = "algorithm_submission_tests"

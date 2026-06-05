@@ -7,7 +7,6 @@ from app.services.video_check import VIDEO_EXTS, run_video_check
 from app.workers.db import session_scope
 from app.workers.helpers import ensure_check_row, finalise_submission
 
-
 def _video_source(team) -> str | None:
     """Prefer an uploaded video file over the URL."""
     base = Path(settings.upload_dir) / f"team_{team.id}"
@@ -16,7 +15,6 @@ def _video_source(team) -> str | None:
         if p.exists():
             return str(p)
     return team.video_url
-
 
 @celery_app.task(name="app.workers.tasks_video.check_video_task", bind=True, max_retries=1)
 def check_video_task(self, submission_id: int) -> dict:

@@ -19,7 +19,6 @@ from app.schemas.hackathon import HackathonCreate, HackathonOut, HackathonUpdate
 
 router = APIRouter()
 
-
 def _to_out(h: Hackathon, teams_count: int, jury_count: int) -> HackathonOut:
     return HackathonOut(
         id=h.id,
@@ -42,7 +41,6 @@ def _to_out(h: Hackathon, teams_count: int, jury_count: int) -> HackathonOut:
         jury_count=jury_count,
     )
 
-
 @router.get("", response_model=list[HackathonOut])
 async def list_hackathons(
     db: AsyncSession = Depends(get_db),
@@ -55,7 +53,6 @@ async def list_hackathons(
         jc = await db.execute(select(func.count(JuryAssignment.id)).where(JuryAssignment.hackathon_id == h.id))
         result.append(_to_out(h, tc.scalar() or 0, jc.scalar() or 0))
     return result
-
 
 @router.get("/{hackathon_id}", response_model=HackathonOut)
 async def get_hackathon(
@@ -70,7 +67,6 @@ async def get_hackathon(
     tc = await db.execute(select(func.count(Team.id)).where(Team.hackathon_id == h.id))
     jc = await db.execute(select(func.count(JuryAssignment.id)).where(JuryAssignment.hackathon_id == h.id))
     return _to_out(h, tc.scalar() or 0, jc.scalar() or 0)
-
 
 @router.post("", response_model=HackathonOut, status_code=201)
 async def create_hackathon(
@@ -100,7 +96,6 @@ async def create_hackathon(
     await db.refresh(h)
     return _to_out(h, 0, 0)
 
-
 @router.patch("/{hackathon_id}", response_model=HackathonOut)
 async def update_hackathon(
     hackathon_id: int,
@@ -123,7 +118,6 @@ async def update_hackathon(
     jc = await db.execute(select(func.count(JuryAssignment.id)).where(JuryAssignment.hackathon_id == h.id))
     return _to_out(h, tc.scalar() or 0, jc.scalar() or 0)
 
-
 @router.get("/{hackathon_id}/invite")
 async def get_invite(
     hackathon_id: int,
@@ -135,7 +129,6 @@ async def get_invite(
     if not h:
         raise HTTPException(status_code=404, detail="hackathon not found")
     return {"invite_link": f"https://hackauth.com/join/{h.id}-{secrets.token_hex(4)}"}
-
 
 @router.get("/mine/upcoming", response_model=list[HackathonOut])
 async def my_hackathons(

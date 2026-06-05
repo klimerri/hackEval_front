@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (name: string, email: string, password: string) => {
-      // Self-registration always creates a participant; jury/organizer are assigned by an organizer.
+
       const res = await api.post<AuthResponse>(
         '/auth/register',
         { name, email, password },
