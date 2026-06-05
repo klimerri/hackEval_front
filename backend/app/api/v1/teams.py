@@ -46,6 +46,7 @@ def _archive_path(team_id: int) -> Path:
 
 DOC_EXTS = (".pdf", ".docx", ".md")
 PRES_EXTS = (".pdf", ".pptx")
+VIDEO_EXTS = (".mp4", ".mov", ".webm", ".mkv", ".avi")
 
 
 def _doc_file_path(team_id: int) -> Path | None:
@@ -68,6 +69,16 @@ def _presentation_file_path(team_id: int) -> Path | None:
     return None
 
 
+def _video_file_path(team_id: int) -> Path | None:
+    """Return the uploaded video (screencast) file for a team, if any."""
+    base = Path(settings.upload_dir) / f"team_{team_id}"
+    for ext in VIDEO_EXTS:
+        p = base / f"video{ext}"
+        if p.exists():
+            return p
+    return None
+
+
 def _team_out(team: Team) -> TeamOut:
     return TeamOut(
         id=team.id,
@@ -83,6 +94,7 @@ def _team_out(team: Team) -> TeamOut:
         has_archive=_archive_path(team.id).exists(),
         has_doc_file=_doc_file_path(team.id) is not None,
         has_presentation_file=_presentation_file_path(team.id) is not None,
+        has_video_file=_video_file_path(team.id) is not None,
         applied_at=team.applied_at,
         decided_at=team.decided_at,
         members=[
@@ -670,6 +682,11 @@ async def update_submission(
         pres = _presentation_file_path(team_id)
         if pres:
             pres.unlink()
+    # Same rule for the screencast: a link drops a previously uploaded video.
+    if team.video_url:
+        vid = _video_file_path(team_id)
+        if vid:
+            vid.unlink()
     await db.commit()
     sub, created = await _ensure_submission(db, team_id)
     # Re-run only the checks whose artifact was provided (all on first submission).
@@ -894,6 +911,70 @@ async def delete_presentation(
     pres = _presentation_file_path(team_id)
     if pres:
         pres.unlink()
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.post("/{team_id}/submission/video", response_model=TeamOut)
+async def upload_video(
+    team_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Upload a screencast video file (MP4 / MOV / WEBM / MKV / AVI) instead of a URL."""
+    team, _hack = await _assert_can_submit(db, team_id, user)
+
+    name = (file.filename or "").lower()
+    ext = next((e for e in VIDEO_EXTS if name.endswith(e)), None)
+    if ext is None:
+        raise HTTPException(status_code=400, detail="only .mp4, .mov, .webm, .mkv or .avi files are accepted")
+
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=400, detail=f"file exceeds {settings.max_upload_mb} MB")
+
+    team_dir = Path(settings.upload_dir) / f"team_{team_id}"
+    team_dir.mkdir(parents=True, exist_ok=True)
+    # remove any previous video file (different extension) then write the new one
+    existing = _video_file_path(team_id)
+    if existing:
+        existing.unlink()
+    (team_dir / f"video{ext}").write_bytes(data)
+
+    # using an uploaded file ⇒ drop the video URL (single source)
+    team.video_url = None
+    await db.commit()
+
+    sub, created = await _ensure_submission(db, team_id)
+    from app.workers.dispatcher import dispatch_checks
+
+    # only re-run the video check (all checks on first submission)
+    await dispatch_checks(team_id, sub.id, None if created else {"video"})
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.delete("/{team_id}/submission/video", response_model=TeamOut)
+async def delete_video(
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Remove the uploaded video file so the team can use a URL again."""
+    team, _hack = await _assert_can_submit(db, team_id, user)
+    vid = _video_file_path(team_id)
+    if vid:
+        vid.unlink()
     team = (
         await db.execute(
             select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))

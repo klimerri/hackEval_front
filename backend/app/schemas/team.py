@@ -43,6 +43,7 @@ class TeamOut(BaseModel):
     has_archive: bool = False
     has_doc_file: bool = False
     has_presentation_file: bool = False
+    has_video_file: bool = False
     applied_at: datetime
     decided_at: datetime | None = None
     members: list[TeamMemberOut] = []

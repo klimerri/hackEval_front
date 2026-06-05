@@ -192,6 +192,16 @@ export function JuryPage() {
                         : "Видео не приложено"
                     }
                   />
+                  {selectedTeam.checks.video.summary && (
+                    <div className="sm:col-span-2 p-4 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                      <p className="text-xs font-bold text-indigo-700 mb-1">
+                        Краткое описание скринкаста
+                      </p>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedTeam.checks.video.summary}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-sm text-gray-500">

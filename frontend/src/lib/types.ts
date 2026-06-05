@@ -76,6 +76,7 @@ export interface Team {
   has_archive: boolean;
   has_doc_file: boolean;
   has_presentation_file: boolean;
+  has_video_file: boolean;
   applied_at: string;
   decided_at: string | null;
   members: TeamMember[];

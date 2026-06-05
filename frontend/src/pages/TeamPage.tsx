@@ -49,6 +49,7 @@ export function TeamPage() {
   const [uploadingArchive, setUploadingArchive] = useState<number | null>(null);
   const [uploadingDocs, setUploadingDocs] = useState<number | null>(null);
   const [uploadingPres, setUploadingPres] = useState<number | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState<number | null>(null);
 
   const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set());
 
@@ -236,7 +237,7 @@ export function TeamPage() {
         github_url: team?.has_archive ? null : f.github.trim() || null,
         docs_url: team?.has_doc_file ? null : f.docs.trim() || null,
         presentation_url: team?.has_presentation_file ? null : f.presentation.trim() || null,
-        video_url: f.video.trim() || null,
+        video_url: team?.has_video_file ? null : f.video.trim() || null,
       });
       toast.success("Артефакты сохранены, проверки запущены");
       reloadMy();
@@ -308,6 +309,34 @@ export function TeamPage() {
     try {
       await api.del<Team>(`/teams/${teamId}/submission/presentation`);
       toast.success("Файл презентации удалён — теперь можно указать ссылку");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadVideo = async (teamId: number, file: File) => {
+    setUploadingVideo(teamId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.upload<Team>(`/teams/${teamId}/submission/video`, fd);
+      toast.success("Видео загружено, проверка запущена");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Не удалось загрузить видео");
+    } finally {
+      setUploadingVideo(null);
+    }
+  };
+
+  const handleDeleteVideo = async (teamId: number) => {
+    setBusy(true);
+    try {
+      await api.del<Team>(`/teams/${teamId}/submission/video`);
+      toast.success("Файл видео удалён — теперь можно указать ссылку");
       reloadMy();
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
@@ -889,13 +918,74 @@ export function TeamPage() {
                           </div>
                         </>
                       )}
-                      <ArtifactInput
-                        icon={Video}
-                        label="Скринкаст (ссылка или файл)"
-                        placeholder="https://..."
-                        value={artForm.video}
-                        onChange={(v) => setArtifactField(team.id, "video", v)}
-                      />
+                      {/* Скринкаст: ЛИБО файл, ЛИБО ссылка */}
+                      {team.has_video_file ? (
+                        <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-green-700 min-w-0">
+                              <Video size={16} className="flex-shrink-0" />
+                              <span className="truncate">Загружен файл скринкаста</span>
+                            </span>
+                            <button
+                              onClick={() => handleDeleteVideo(team.id)}
+                              disabled={busy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex-shrink-0"
+                            >
+                              <Trash2 size={13} />
+                              Удалить
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-green-700/80">
+                            Видео проверяется из файла (длительность, кодек, транскрипция). Чтобы указать ссылку — удалите файл.
+                          </p>
+                          <input
+                            type="file"
+                            accept=".mp4,.mov,.webm,.mkv,.avi,video/*"
+                            disabled={uploadingVideo === team.id || uploadLocked}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadVideo(team.id, f);
+                              e.target.value = "";
+                            }}
+                            className="block w-full text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-blue-600 hover:file:bg-blue-50 disabled:opacity-50"
+                          />
+                          <p className="text-[11px] text-green-700/80">
+                            {uploadingVideo === team.id ? "Загрузка..." : "…или заменить файл новым."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <ArtifactInput
+                            icon={Video}
+                            label="Скринкаст (MP4 / MOV / WEBM / ссылка)"
+                            placeholder="https://..."
+                            value={artForm.video}
+                            onChange={(v) => setArtifactField(team.id, "video", v)}
+                          />
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                              <Video size={14} className="text-gray-400" />
+                              …или загрузите видеофайл (.mp4 / .mov / .webm / .mkv / .avi)
+                            </label>
+                            <input
+                              type="file"
+                              accept=".mp4,.mov,.webm,.mkv,.avi,video/*"
+                              disabled={uploadingVideo === team.id || uploadLocked}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadVideo(team.id, f);
+                                e.target.value = "";
+                              }}
+                              className="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 disabled:opacity-50"
+                            />
+                            <p className="text-[11px] text-gray-400">
+                              {uploadingVideo === team.id
+                                ? "Загрузка и запуск проверки..."
+                                : "Загрузка файла заменит ссылку на видео."}
+                            </p>
+                          </div>
+                        </>
+                      )}
 
                       <div className="flex items-center justify-between gap-3 pt-1">
                         <p className="text-[11px] text-gray-400">
