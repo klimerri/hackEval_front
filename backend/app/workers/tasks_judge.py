@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 
 from app.core.celery_app import celery_app
 from app.services.judge import judge_submission

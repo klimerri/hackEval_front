@@ -151,10 +151,10 @@ async def create_team(
     h = (await db.execute(select(Hackathon).where(Hackathon.id == payload.hackathon_id))).scalar_one_or_none()
     if not h:
         raise HTTPException(status_code=404, detail="hackathon not found")
-    
+
     if await _check_user_in_hackathon(db, user.id, payload.hackathon_id):
         raise HTTPException(status_code=400, detail="already participating in this hackathon")
-    
+
     team = Team(
         name=payload.name,
         hackathon_id=payload.hackathon_id,
@@ -252,18 +252,18 @@ async def request_join_team(
         raise HTTPException(status_code=404, detail="team not found")
     if team.status != TeamStatus.APPROVED:
         raise HTTPException(status_code=400, detail="team is not open for applications")
-    
+
     members = (await db.execute(select(TeamMember).where(TeamMember.team_id == team.id))).scalars().all()
     if any(m.user_id == user.id for m in members):
         raise HTTPException(status_code=400, detail="already a member")
-    
+
     hack = (await db.execute(select(Hackathon).where(Hackathon.id == team.hackathon_id))).scalar_one()
     if len(members) >= hack.max_team_size:
         raise HTTPException(status_code=400, detail="team is full")
-    
+
     if await _check_user_in_hackathon(db, user.id, team.hackathon_id):
         raise HTTPException(status_code=400, detail="already participating in this hackathon")
-    
+
     existing_request = (
         await db.execute(
             select(TeamJoinRequest).where(
@@ -275,7 +275,7 @@ async def request_join_team(
     ).scalar_one_or_none()
     if existing_request:
         raise HTTPException(status_code=400, detail="join request already pending")
-    
+
     request = TeamJoinRequest(
         team_id=team_id,
         user_id=user.id,
@@ -306,7 +306,7 @@ async def list_join_requests(
     team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
     if not team:
         raise HTTPException(status_code=404, detail="team not found")
-    
+
     captain = (
         await db.execute(
             select(TeamMember).where(
@@ -318,7 +318,7 @@ async def list_join_requests(
     ).scalar_one_or_none()
     if not captain:
         raise HTTPException(status_code=403, detail="only captain can view requests")
-    
+
     requests = (
         await db.execute(
             select(TeamJoinRequest)
@@ -341,7 +341,7 @@ async def decide_join_request(
     team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
     if not team:
         raise HTTPException(status_code=404, detail="team not found")
-    
+
     captain = (
         await db.execute(
             select(TeamMember).where(
@@ -353,7 +353,7 @@ async def decide_join_request(
     ).scalar_one_or_none()
     if not captain:
         raise HTTPException(status_code=403, detail="only captain can approve/reject requests")
-    
+
     request = (
         await db.execute(
             select(TeamJoinRequest)
@@ -365,16 +365,16 @@ async def decide_join_request(
         raise HTTPException(status_code=404, detail="request not found")
     if request.status != JoinRequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="request already decided")
-    
+
     hack = (await db.execute(select(Hackathon).where(Hackathon.id == team.hackathon_id))).scalar_one()
     members = (await db.execute(select(TeamMember).where(TeamMember.team_id == team.id))).scalars().all()
-    
+
     if payload.decision == "approved":
         if len(members) >= hack.max_team_size:
             raise HTTPException(status_code=400, detail="team is full")
         if await _check_user_in_hackathon(db, request.user_id, team.hackathon_id):
             raise HTTPException(status_code=400, detail="user already in another team for this hackathon")
-        
+
         request.status = JoinRequestStatus.APPROVED
         request.decided_at = datetime.now(timezone.utc)
         db.add(TeamMember(team_id=team.id, user_id=request.user_id, role=TeamMemberRole.MEMBER))
@@ -427,7 +427,7 @@ async def update_team(
     team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
     if not team:
         raise HTTPException(status_code=404, detail="team not found")
-    
+
     captain = (
         await db.execute(
             select(TeamMember).where(
@@ -439,7 +439,7 @@ async def update_team(
     ).scalar_one_or_none()
     if not captain:
         raise HTTPException(status_code=403, detail="only captain can edit team")
-    
+
     if payload.name is not None:
         existing = (
             await db.execute(
@@ -453,10 +453,10 @@ async def update_team(
         if existing:
             raise HTTPException(status_code=400, detail="team name already exists in this hackathon")
         team.name = payload.name
-    
+
     if payload.notes is not None:
         team.notes = payload.notes
-    
+
     await db.commit()
     team = (
         await db.execute(

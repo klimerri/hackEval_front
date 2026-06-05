@@ -12,7 +12,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-from app.core.database import Base
 import app.models  # noqa: F401  ensure models registered
 
 _sync_engine = create_engine(settings.sync_database_url, pool_pre_ping=True, future=True)

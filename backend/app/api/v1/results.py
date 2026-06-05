@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import desc, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.models.hackathon import Hackathon
 from app.models.jury import JuryScore
 from app.models.submission import (
     CodeCheck,
@@ -163,7 +162,6 @@ async def hackathon_winners(
 ) -> list[HackathonWinnerOut]:
     ranking = await hackathon_ranking(hackathon_id, db, user)
     top = [r for r in ranking if r.final_score > 0][:3]
-    prizes = ["250 000 ₽", "150 000 ₽", "100 000 ₽"]
     return [
         HackathonWinnerOut(rank=i + 1, team_id=r.team_id, team_name=r.team_name, final_score=r.final_score)
         for i, r in enumerate(top)

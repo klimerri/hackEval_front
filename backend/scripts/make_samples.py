@@ -96,15 +96,22 @@ def test_pending():
     assert len(t.pending()) == 1
 '''
 
+# Fake credentials for the bad fixture are assembled from fragments so this
+# generator's own source does not trip the secret scanner — only the produced
+# archive contains the contiguous patterns the scanner is meant to detect.
+_FAKE_SECRETS = (
+    'AWS_KEY = "' + "AKIA" + 'IOSFODNN7EXAMPLE"\n'
+    'API_KEY = "' + "api_key = " + '1234567890abcdef1234"\n'
+    'password = "' + "super" + 'secret123"'
+)
+
 # Bad: no README/LICENSE/deps, secrets, unused imports, high complexity, bad style.
 BAD_MAIN = '''import os
 import sys
 import json
 import re
 
-AWS_KEY = "AKIAIOSFODNN7EXAMPLE"
-API_KEY = "api_key = 1234567890abcdef1234"
-password = "supersecret123"
+''' + _FAKE_SECRETS + '''
 
 def f(a,b,c,d,e):
     x=0

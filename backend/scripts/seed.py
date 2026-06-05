@@ -6,6 +6,7 @@ Run inside the api container:
 from __future__ import annotations
 
 import asyncio
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -74,7 +75,11 @@ HACKATHONS = [
 ]
 
 
-async def get_or_create_user(db: AsyncSession, name: str, email: str, role: UserRole, password: str = "password") -> User:
+# Demo credentials — configurable via env so no fixed login is hardcoded in source.
+DEMO_PASSWORD = os.environ.get("SEED_PASSWORD", "password")
+
+
+async def get_or_create_user(db: AsyncSession, name: str, email: str, role: UserRole, password: str = DEMO_PASSWORD) -> User:
     res = await db.execute(select(User).where(User.email == email))
     user = res.scalar_one_or_none()
     if user:
@@ -94,23 +99,23 @@ async def main() -> None:
     now = datetime.now(timezone.utc)
     async with AsyncSessionLocal() as db:
         organizer = await get_or_create_user(db, "Organizer Admin", "organizer@hackauth.com", UserRole.ORGANIZER)
-        jury1 = await get_or_create_user(db, "John Doe", "john@jury.com", UserRole.JURY, password="password")
+        jury1 = await get_or_create_user(db, "John Doe", "john@jury.com", UserRole.JURY)
         jury1.company = "Google"
         jury1.specialization = "Backend"
-        jury2 = await get_or_create_user(db, "Jane Smith", "jane@jury.com", UserRole.JURY, password="password")
+        jury2 = await get_or_create_user(db, "Jane Smith", "jane@jury.com", UserRole.JURY)
         jury2.company = "Figma"
         jury2.specialization = "Design"
-        jury3 = await get_or_create_user(db, "Alex Kuznetsov", "alex@jury.com", UserRole.JURY, password="password")
+        jury3 = await get_or_create_user(db, "Alex Kuznetsov", "alex@jury.com", UserRole.JURY)
         jury3.company = "Yandex"
         jury3.specialization = "ML"
         # Dedicated reviewer account for checking teams (per request).
-        reviewer = await get_or_create_user(db, "Maria Reviewer", "reviewer@jury.com", UserRole.JURY, password="password")
+        reviewer = await get_or_create_user(db, "Maria Reviewer", "reviewer@jury.com", UserRole.JURY)
         reviewer.company = "Sber"
         reviewer.specialization = "QA / Review"
 
-        captain = await get_or_create_user(db, "Alex K.", "alex@team.com", UserRole.PARTICIPANT, password="password")
-        captain2 = await get_or_create_user(db, "Sarah J.", "sarah@team.com", UserRole.PARTICIPANT, password="password")
-        captain3 = await get_or_create_user(db, "Mike R.", "mike@team.com", UserRole.PARTICIPANT, password="password")
+        captain = await get_or_create_user(db, "Alex K.", "alex@team.com", UserRole.PARTICIPANT)
+        captain2 = await get_or_create_user(db, "Sarah J.", "sarah@team.com", UserRole.PARTICIPANT)
+        captain3 = await get_or_create_user(db, "Mike R.", "mike@team.com", UserRole.PARTICIPANT)
         await db.flush()
         # Persist demo users now so newly added accounts appear even when the
         # rest of the seed is skipped on an already-seeded database.

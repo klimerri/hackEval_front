@@ -1,7 +1,5 @@
-import asyncio
 import logging
 
-from app.core.celery_app import celery_app
 from app.workers.tasks_code import check_code_task
 from app.workers.tasks_docs import check_docs_task
 from app.workers.tasks_judge import judge_submission_task

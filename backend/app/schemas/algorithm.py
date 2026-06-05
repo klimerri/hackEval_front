@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 AlgoLangLiteral = Literal["python", "cpp", "java"]
 VerdictLiteral = Literal["OK", "WA", "TL", "ML", "RE", "CE", "PENDING", "RUNNING"]
