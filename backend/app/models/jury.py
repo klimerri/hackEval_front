@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -29,6 +30,9 @@ class JuryScore(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
     jury_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # Per-criterion scores keyed by criterion key, e.g. {"design": 8, "pitch": 7}.
+    scores: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # Legacy fixed columns (kept for back-compat / fallback).
     design: Mapped[int] = mapped_column(default=0)
     pitch: Mapped[int] = mapped_column(default=0)
     complexity: Mapped[int] = mapped_column(default=0)

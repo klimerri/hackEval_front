@@ -15,8 +15,6 @@ import {
   ShieldCheck,
   XCircle,
   Clock,
-  Copy,
-  Link as LinkIcon,
   Trash2,
 } from "lucide-react";
 import {
@@ -35,6 +33,7 @@ import { useApi } from "../lib/useApi";
 import { api, ApiError } from "../lib/api";
 import type {
   AssignedJury,
+  Criterion,
   Hackathon,
   JuryPoolUser,
   OrganizerAnalytics,
@@ -56,8 +55,8 @@ export function OrganizerPage() {
   const [promoteEmail, setPromoteEmail] = useState("");
   const [newJury, setNewJury] = useState({ name: "", email: "", password: "", company: "", specialization: "" });
   const [busy, setBusy] = useState(false);
-  const [coefficients, setCoefficients] = useState<Record<string, number>>({});
-  const [coefsDirty, setCoefsDirty] = useState(false);
+  const [criteria, setCriteria] = useState<Criterion[]>([]);
+  const [critDirty, setCritDirty] = useState(false);
 
   const [newHack, setNewHack] = useState({
     title: "",
@@ -92,8 +91,8 @@ export function OrganizerPage() {
   );
 
   useEffect(() => {
-    if (current) setCoefficients(current.coefficients);
-    setCoefsDirty(false);
+    if (current) setCriteria(current.jury_criteria ?? []);
+    setCritDirty(false);
   }, [current?.id]);
 
   const handleCreateHackathon = async () => {
@@ -250,13 +249,40 @@ export function OrganizerPage() {
     }
   };
 
-  const handleSaveCoefs = async () => {
+  const slugify = (label: string) =>
+    label
+      .toLowerCase()
+      .replace(/[^a-zа-я0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || `crit_${Date.now()}`;
+
+  const addCriterion = () => {
+    setCriteria((cs) => [...cs, { key: `crit_${Date.now()}`, label: "Новый критерий", weight: 10 }]);
+    setCritDirty(true);
+  };
+  const updateCriterion = (idx: number, patch: Partial<Criterion>) => {
+    setCriteria((cs) => cs.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
+    setCritDirty(true);
+  };
+  const removeCriterion = (idx: number) => {
+    setCriteria((cs) => cs.filter((_, i) => i !== idx));
+    setCritDirty(true);
+  };
+
+  const handleSaveCriteria = async () => {
     if (!current) return;
+    const cleaned = criteria
+      .map((c) => ({ ...c, label: c.label.trim(), key: c.key || slugify(c.label) }))
+      .filter((c) => c.label);
+    if (cleaned.length === 0) {
+      toast.error("Добавьте хотя бы один критерий");
+      return;
+    }
     setBusy(true);
     try {
-      await api.patch<Hackathon>(`/hackathons/${current.id}`, { coefficients });
-      toast.success("Коэффициенты обновлены");
-      setCoefsDirty(false);
+      await api.patch<Hackathon>(`/hackathons/${current.id}`, { jury_criteria: cleaned });
+      toast.success("Критерии жюри обновлены");
+      setCritDirty(false);
       reloadHack();
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
@@ -269,7 +295,6 @@ export function OrganizerPage() {
     const teams = teamsForHack ?? [];
     const pending = teams.filter((t) => t.status === "pending");
     const approved = teams.filter((t) => t.status === "approved");
-    const inviteLink = `https://hackauth.com/join/${current.id}`;
 
     return (
       <div className="space-y-8 animate-in slide-in-from-right-4 duration-500 pb-20">
@@ -301,22 +326,6 @@ export function OrganizerPage() {
               {new Date(current.start_date).toLocaleDateString("ru-RU")} –{" "}
               {new Date(current.end_date).toLocaleDateString("ru-RU")}
             </p>
-          </div>
-
-          <div className="flex gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 text-blue-700 font-bold rounded-xl">
-              <LinkIcon size={18} />
-              <span className="text-sm truncate max-w-[150px]">{inviteLink}</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(inviteLink);
-                  toast.success("Ссылка скопирована");
-                }}
-                className="ml-2 p-1 hover:bg-blue-200 rounded transition-colors"
-              >
-                <Copy size={14} />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -459,48 +468,61 @@ export function OrganizerPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-50 pb-4">
                 <Settings size={18} className="text-blue-600" />
-                Коэффициенты
+                Критерии оценки жюри
               </h4>
-              <div className="space-y-6">
-                {Object.entries(coefficients).map(([key, val]) => (
-                  <div key={key} className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700 capitalize">
-                        {key === "code"
-                          ? "Чистота кода"
-                          : key === "design"
-                            ? "Дизайн и UX"
-                            : "Питч проекта"}
-                      </span>
-                      <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                        {val}%
-                      </span>
-                    </div>
+              <p className="text-[11px] text-gray-400 -mt-1">
+                Авто-проверки фиксированы (40% итога). Жюри оценивает по этим критериям (60%);
+                веса — относительные.
+              </p>
+              <div className="space-y-3">
+                {criteria.map((c, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
                     <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={val}
-                      onChange={(e) => {
-                        setCoefficients((c) => ({ ...c, [key]: Number(e.target.value) }));
-                        setCoefsDirty(true);
-                      }}
-                      className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      value={c.label}
+                      onChange={(e) => updateCriterion(idx, { label: e.target.value })}
+                      placeholder="Название критерия"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
                     />
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={c.weight}
+                        onChange={(e) => updateCriterion(idx, { weight: Number(e.target.value) })}
+                        className="w-16 px-2 py-2 rounded-lg border border-gray-200 text-sm text-center focus:border-blue-500 outline-none"
+                      />
+                      <span className="text-xs text-gray-400">%</span>
+                    </div>
+                    <button
+                      onClick={() => removeCriterion(idx)}
+                      title="Удалить критерий"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 ))}
+                {criteria.length === 0 && (
+                  <p className="text-xs text-gray-400">Критериев нет — добавьте первый.</p>
+                )}
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] text-blue-700 leading-relaxed italic">
-                  Сумма: {Object.values(coefficients).reduce((a, b) => a + b, 0)}%
+              <button
+                onClick={addCriterion}
+                className="w-full py-2 text-xs font-semibold text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50"
+              >
+                + Добавить критерий
+              </button>
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-[10px] text-gray-400 italic">
+                  Сумма весов: {criteria.reduce((a, c) => a + (c.weight || 0), 0)}%
                 </p>
                 <button
-                  onClick={handleSaveCoefs}
-                  disabled={!coefsDirty || busy}
+                  onClick={handleSaveCriteria}
+                  disabled={!critDirty || busy}
                   className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-40"
                 >
                   Сохранить
@@ -954,7 +976,7 @@ export function OrganizerPage() {
                 <input
                   value={newHack.prize_pool}
                   onChange={(e) => setNewHack({ ...newHack, prize_pool: e.target.value })}
-                  placeholder="500,000 ₽"
+                  placeholder="500 000 ₽"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
                 />
               </Field>

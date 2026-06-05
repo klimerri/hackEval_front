@@ -11,6 +11,13 @@ import {
   ChevronUp,
   Trash2,
   UserX,
+  Paperclip,
+  Github,
+  FileText,
+  Presentation,
+  Video,
+  Save,
+  FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "../lib/useApi";
@@ -34,6 +41,13 @@ export function TeamPage() {
   const [requestsMap, setRequestsMap] = useState<Record<number, JoinRequestOut[]>>({});
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [loadingRequests, setLoadingRequests] = useState<Set<number>>(new Set());
+
+  const [artifactsOpen, setArtifactsOpen] = useState<Set<number>>(new Set());
+  const [artifactForms, setArtifactForms] = useState<
+    Record<number, { github: string; docs: string; presentation: string; video: string }>
+  >({});
+  const [uploadingArchive, setUploadingArchive] = useState<number | null>(null);
+  const [uploadingDocs, setUploadingDocs] = useState<number | null>(null);
 
   const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set());
 
@@ -175,6 +189,116 @@ export function TeamPage() {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const toggleArtifacts = (team: Team) => {
+    const willOpen = !artifactsOpen.has(team.id);
+    setArtifactsOpen((prev) => {
+      const n = new Set(prev);
+      if (n.has(team.id)) n.delete(team.id);
+      else n.add(team.id);
+      return n;
+    });
+    if (willOpen && !artifactForms[team.id]) {
+      setArtifactForms((prev) => ({
+        ...prev,
+        [team.id]: {
+          github: team.github_url ?? "",
+          docs: team.docs_url ?? "",
+          presentation: team.presentation_url ?? "",
+          video: team.video_url ?? "",
+        },
+      }));
+    }
+  };
+
+  const setArtifactField = (
+    teamId: number,
+    key: "github" | "docs" | "presentation" | "video",
+    value: string,
+  ) => {
+    setArtifactForms((prev) => ({
+      ...prev,
+      [teamId]: { ...(prev[teamId] ?? { github: "", docs: "", presentation: "", video: "" }), [key]: value },
+    }));
+  };
+
+  const handleSaveArtifacts = async (teamId: number) => {
+    const f = artifactForms[teamId];
+    if (!f) return;
+    const team = my.find((t) => t.id === teamId);
+    setBusy(true);
+    try {
+      await api.put<Team>(`/teams/${teamId}/submission`, {
+        // when an archive/file is the source, don't overwrite the corresponding URL
+        github_url: team?.has_archive ? null : f.github.trim() || null,
+        docs_url: team?.has_doc_file ? null : f.docs.trim() || null,
+        presentation_url: f.presentation.trim() || null,
+        video_url: f.video.trim() || null,
+      });
+      toast.success("Артефакты сохранены, проверки запущены");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteArchive = async (teamId: number) => {
+    setBusy(true);
+    try {
+      await api.del<Team>(`/teams/${teamId}/submission/archive`);
+      toast.success("Архив удалён — теперь можно указать ссылку");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadDocs = async (teamId: number, file: File) => {
+    setUploadingDocs(teamId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.upload<Team>(`/teams/${teamId}/submission/docs`, fd);
+      toast.success("Документация загружена, проверка запущена");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Не удалось загрузить документацию");
+    } finally {
+      setUploadingDocs(null);
+    }
+  };
+
+  const handleDeleteDocs = async (teamId: number) => {
+    setBusy(true);
+    try {
+      await api.del<Team>(`/teams/${teamId}/submission/docs`);
+      toast.success("Файл документации удалён — теперь можно указать ссылку");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadArchive = async (teamId: number, file: File) => {
+    setUploadingArchive(teamId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.upload<Team>(`/teams/${teamId}/submission/archive`, fd);
+      toast.success("Архив загружен, проверка запущена");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Не удалось загрузить архив");
+    } finally {
+      setUploadingArchive(null);
     }
   };
 
@@ -329,6 +453,21 @@ export function TeamPage() {
               const reqs = requestsMap[team.id] ?? [];
               const isLoadingReqs = loadingRequests.has(team.id);
               const pendingCount = reqs.length;
+              const artOpen = artifactsOpen.has(team.id);
+              const artForm =
+                artifactForms[team.id] ?? { github: "", docs: "", presentation: "", video: "" };
+              const deadlinePassed = hack
+                ? new Date() > new Date(hack.submission_deadline)
+                : false;
+              const notStarted = hack ? new Date() < new Date(hack.start_date) : false;
+              // uploads allowed only while the hackathon is ongoing
+              const uploadLocked = deadlinePassed || notStarted;
+              const hasArtifacts = !!(
+                team.github_url ||
+                team.docs_url ||
+                team.presentation_url ||
+                team.video_url
+              );
 
               return (
                 <div
@@ -382,6 +521,19 @@ export function TeamPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    {team.status === "approved" && (
+                      <button
+                        onClick={() => toggleArtifacts(team)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${
+                          hasArtifacts
+                            ? "bg-green-50 text-green-700 hover:bg-green-100"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        }`}
+                      >
+                        <Paperclip size={14} />
+                        Артефакты{hasArtifacts ? " ✓" : ""}
+                      </button>
+                    )}
                     {isMineCaptain && (
                       <button
                         onClick={() => openEdit(team)}
@@ -496,6 +648,184 @@ export function TeamPage() {
                       )}
                     </div>
                   )}
+
+                  {team.status === "approved" && artOpen && (
+                    <div className="pt-3 border-t border-gray-100 space-y-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Артефакты решения
+                      </p>
+                      {/* Источник кода: ЛИБО архив, ЛИБО ссылка на репозиторий */}
+                      {team.has_archive ? (
+                        <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-green-700 min-w-0">
+                              <FileArchive size={16} className="flex-shrink-0" />
+                              <span className="truncate">Загружен архив: code.zip</span>
+                            </span>
+                            <button
+                              onClick={() => handleDeleteArchive(team.id)}
+                              disabled={busy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex-shrink-0"
+                            >
+                              <Trash2 size={13} />
+                              Удалить
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-green-700/80">
+                            Код проверяется из архива. Чтобы вместо него указать ссылку —
+                            удалите архив.
+                          </p>
+                          <input
+                            type="file"
+                            accept=".zip,application/zip"
+                            disabled={uploadingArchive === team.id || uploadLocked}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadArchive(team.id, f);
+                              e.target.value = "";
+                            }}
+                            className="block w-full text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-blue-600 hover:file:bg-blue-50 disabled:opacity-50"
+                          />
+                          <p className="text-[11px] text-green-700/80">
+                            {uploadingArchive === team.id ? "Загрузка..." : "…или заменить архив новым файлом."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <ArtifactInput
+                            icon={Github}
+                            label="Репозиторий (GitHub / GitLab)"
+                            placeholder="https://github.com/команда/проект"
+                            value={artForm.github}
+                            onChange={(v) => setArtifactField(team.id, "github", v)}
+                          />
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                              <FileArchive size={14} className="text-gray-400" />
+                              …или загрузите архив проекта (.zip)
+                            </label>
+                            <input
+                              type="file"
+                              accept=".zip,application/zip"
+                              disabled={uploadingArchive === team.id || uploadLocked}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadArchive(team.id, f);
+                                e.target.value = "";
+                              }}
+                              className="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 disabled:opacity-50"
+                            />
+                            <p className="text-[11px] text-gray-400">
+                              {uploadingArchive === team.id
+                                ? "Загрузка и запуск проверки..."
+                                : "Загрузка архива заменит ссылку на репозиторий."}
+                            </p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Документация: ЛИБО файл, ЛИБО ссылка */}
+                      {team.has_doc_file ? (
+                        <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-green-700 min-w-0">
+                              <FileText size={16} className="flex-shrink-0" />
+                              <span className="truncate">Загружен файл документации</span>
+                            </span>
+                            <button
+                              onClick={() => handleDeleteDocs(team.id)}
+                              disabled={busy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex-shrink-0"
+                            >
+                              <Trash2 size={13} />
+                              Удалить
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-green-700/80">
+                            Документация проверяется из файла. Чтобы указать ссылку — удалите файл.
+                          </p>
+                          <input
+                            type="file"
+                            accept=".pdf,.docx,.md,application/pdf"
+                            disabled={uploadingDocs === team.id || uploadLocked}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadDocs(team.id, f);
+                              e.target.value = "";
+                            }}
+                            className="block w-full text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-blue-600 hover:file:bg-blue-50 disabled:opacity-50"
+                          />
+                          <p className="text-[11px] text-green-700/80">
+                            {uploadingDocs === team.id ? "Загрузка..." : "…или заменить файл новым."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <ArtifactInput
+                            icon={FileText}
+                            label="Документация (PDF / DOCX / Markdown)"
+                            placeholder="https://..."
+                            value={artForm.docs}
+                            onChange={(v) => setArtifactField(team.id, "docs", v)}
+                          />
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                              <FileText size={14} className="text-gray-400" />
+                              …или загрузите файл (.pdf / .docx / .md)
+                            </label>
+                            <input
+                              type="file"
+                              accept=".pdf,.docx,.md,application/pdf"
+                              disabled={uploadingDocs === team.id || uploadLocked}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadDocs(team.id, f);
+                                e.target.value = "";
+                              }}
+                              className="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 disabled:opacity-50"
+                            />
+                            <p className="text-[11px] text-gray-400">
+                              {uploadingDocs === team.id
+                                ? "Загрузка и запуск проверки..."
+                                : "Загрузка файла заменит ссылку на документацию."}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      <ArtifactInput
+                        icon={Presentation}
+                        label="Презентация (PPTX / PDF)"
+                        placeholder="https://..."
+                        value={artForm.presentation}
+                        onChange={(v) => setArtifactField(team.id, "presentation", v)}
+                      />
+                      <ArtifactInput
+                        icon={Video}
+                        label="Скринкаст (ссылка или файл)"
+                        placeholder="https://..."
+                        value={artForm.video}
+                        onChange={(v) => setArtifactField(team.id, "video", v)}
+                      />
+
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <p className="text-[11px] text-gray-400">
+                          {notStarted
+                            ? "Хакатон ещё не начался — загрузка будет доступна позже"
+                            : deadlinePassed
+                              ? "Дедлайн подачи прошёл — изменения недоступны"
+                              : "Можно обновлять до дедлайна подачи"}
+                        </p>
+                        <button
+                          onClick={() => handleSaveArtifacts(team.id)}
+                          disabled={busy || uploadLocked}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          <Save size={14} />
+                          Сохранить
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -569,6 +899,36 @@ export function TeamPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function ArtifactInput({
+  icon: Icon,
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  icon: typeof Github;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+        <Icon size={14} className="text-gray-400" />
+        {label}
+      </label>
+      <input
+        type="url"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+      />
     </div>
   );
 }

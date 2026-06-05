@@ -20,7 +20,24 @@ import { toast } from "sonner";
 import { cn } from "../lib/utils";
 import { useApi } from "../lib/useApi";
 import { api, ApiError } from "../lib/api";
-import type { JuryHackathon, JuryTeam } from "../lib/types";
+import type { Criterion, Hackathon, JuryHackathon, JuryTeam } from "../lib/types";
+
+function weightedAvg(scores: Record<string, number>, criteria: Criterion[]): number {
+  if (criteria.length) {
+    let num = 0;
+    let den = 0;
+    for (const c of criteria) {
+      const w = c.weight || 0;
+      if (c.key in scores && w > 0) {
+        num += (scores[c.key] || 0) * w;
+        den += w;
+      }
+    }
+    if (den > 0) return num / den;
+  }
+  const vals = Object.values(scores);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
 
 export function JuryPage() {
   const [selectedHackathon, setSelectedHackathon] = useState<number | null>(null);
@@ -30,28 +47,33 @@ export function JuryPage() {
   const { data: hackathons, loading, error, reload } = useApi<JuryHackathon[]>(
     "/jury/hackathons",
   );
+  const { data: allHackathons } = useApi<Hackathon[]>("/hackathons");
   const { data: teams, reload: reloadTeams } = useApi<JuryTeam[]>(
     selectedHackathon ? `/jury/hackathons/${selectedHackathon}/teams` : null,
     [selectedHackathon],
   );
 
   const selectedTeam = teams?.find((t) => t.id === selectedTeamId);
-  const [scores, setScores] = useState({ design: 0, pitch: 0, complexity: 0, comment: "" });
+  const criteria: Criterion[] =
+    allHackathons?.find((h) => h.id === selectedHackathon)?.jury_criteria ?? [];
+  const [critScores, setCritScores] = useState<Record<string, number>>({});
+  const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (selectedTeam?.my_score) setScores(selectedTeam.my_score);
+    setCritScores(selectedTeam?.my_score?.scores ?? {});
+    setComment(selectedTeam?.my_score?.comment ?? "");
   }, [selectedTeam?.id]);
 
-  const handleScoreChange = (field: "design" | "pitch" | "complexity", value: number) => {
-    setScores((s) => ({ ...s, [field]: value }));
+  const handleScoreChange = (key: string, value: number) => {
+    setCritScores((s) => ({ ...s, [key]: value }));
   };
 
   const save = async () => {
     if (!selectedTeamId) return;
     setSaving(true);
     try {
-      await api.put(`/jury/teams/${selectedTeamId}/score`, scores);
+      await api.put(`/jury/teams/${selectedTeamId}/score`, { scores: critScores, comment });
       toast.success("Оценки сохранены");
       reload();
       reloadTeams();
@@ -67,7 +89,7 @@ export function JuryPage() {
   if (!hackathons) return null;
 
   if (selectedTeamId && selectedTeam) {
-    const total = (scores.design + scores.pitch + scores.complexity) / 3;
+    const total = weightedAvg(critScores, criteria);
     return (
       <div className="space-y-8 animate-in slide-in-from-right-4 duration-500 pb-20 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -146,7 +168,7 @@ export function JuryPage() {
                     title="Код"
                     status={selectedTeam.checks.code.status}
                     score={selectedTeam.checks.code.score}
-                    detail={`LOC: ${selectedTeam.checks.code.loc} · секретов: ${selectedTeam.checks.code.secrets_found} · README: ${selectedTeam.checks.code.has_readme ? "да" : "нет"}`}
+                    detail={`LOC: ${selectedTeam.checks.code.loc} · линтер: ${selectedTeam.checks.code.lint_issues} · секретов: ${selectedTeam.checks.code.secrets_found} · README: ${selectedTeam.checks.code.has_readme ? "да" : "нет"}`}
                   />
                   <CheckCard
                     title="Документация"
@@ -187,42 +209,43 @@ export function JuryPage() {
               </div>
 
               <div className="space-y-8">
-                {(
-                  [
-                    { id: "design" as const, label: "Дизайн и UX" },
-                    { id: "pitch" as const, label: "Питч и Идея" },
-                    { id: "complexity" as const, label: "Техническая сложность" },
-                  ]
-                ).map((criterion) => (
-                  <div key={criterion.id} className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-medium text-gray-700">
-                        {criterion.label}
-                      </label>
-                      <span className="text-lg font-semibold text-blue-600">
-                        {scores[criterion.id]}
-                        <span className="text-gray-400 text-sm font-normal">/10</span>
-                      </span>
+                {criteria.length === 0 && (
+                  <p className="text-sm text-gray-400">
+                    Организатор не задал критерии оценки для этого хакатона.
+                  </p>
+                )}
+                {criteria.map((criterion) => {
+                  const val = critScores[criterion.key] ?? 0;
+                  return (
+                    <div key={criterion.key} className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-medium text-gray-700">
+                          {criterion.label}
+                          <span className="text-gray-400 font-normal"> · вес {criterion.weight}%</span>
+                        </label>
+                        <span className="text-lg font-semibold text-blue-600">
+                          {val}
+                          <span className="text-gray-400 text-sm font-normal">/10</span>
+                        </span>
+                      </div>
+                      <div className="relative h-2 bg-gray-100 rounded-full">
+                        <input
+                          type="range"
+                          min={0}
+                          max={10}
+                          step={1}
+                          value={val}
+                          onChange={(e) => handleScoreChange(criterion.key, Number(e.target.value))}
+                          className="absolute inset-0 w-full h-full bg-transparent appearance-none cursor-pointer z-10 accent-blue-600"
+                        />
+                        <div
+                          className="absolute left-0 top-0 h-full bg-blue-600 rounded-full transition-all duration-300 pointer-events-none"
+                          style={{ width: `${val * 10}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="relative h-2 bg-gray-100 rounded-full">
-                      <input
-                        type="range"
-                        min={0}
-                        max={10}
-                        step={1}
-                        value={scores[criterion.id]}
-                        onChange={(e) =>
-                          handleScoreChange(criterion.id, Number(e.target.value))
-                        }
-                        className="absolute inset-0 w-full h-full bg-transparent appearance-none cursor-pointer z-10 accent-blue-600"
-                      />
-                      <div
-                        className="absolute left-0 top-0 h-full bg-blue-600 rounded-full transition-all duration-300 pointer-events-none"
-                        style={{ width: `${scores[criterion.id] * 10}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div className="pt-2 space-y-3">
                   <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -230,8 +253,8 @@ export function JuryPage() {
                   </label>
                   <textarea
                     placeholder="Ваше мнение о проекте..."
-                    value={scores.comment}
-                    onChange={(e) => setScores((s) => ({ ...s, comment: e.target.value }))}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none transition-all h-32 text-sm resize-none"
                   />
                 </div>

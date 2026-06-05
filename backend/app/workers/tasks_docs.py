@@ -1,9 +1,23 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.core.celery_app import celery_app
+from app.core.config import settings
 from app.services.doc_check import run_doc_check
 from app.workers.db import session_scope
 from app.workers.helpers import ensure_check_row, finalise_submission
+
+DOC_EXTS = (".pdf", ".docx", ".md")
+
+
+def _docs_source(team) -> str | None:
+    """Prefer an uploaded documentation file over the URL."""
+    base = Path(settings.upload_dir) / f"team_{team.id}"
+    for ext in DOC_EXTS:
+        p = base / f"docs{ext}"
+        if p.exists():
+            return str(p)
+    return team.docs_url
 
 
 @celery_app.task(name="app.workers.tasks_docs.check_docs_task", bind=True, max_retries=1)
@@ -21,7 +35,7 @@ def check_docs_task(self, submission_id: int) -> dict:
         check.started_at = datetime.now(timezone.utc)
         db.commit()
 
-        result = run_doc_check(team.docs_url)
+        result = run_doc_check(_docs_source(team))
         for k, v in result.items():
             setattr(check, k, v)
         check.finished_at = datetime.now(timezone.utc)

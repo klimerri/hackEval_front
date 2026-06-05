@@ -1,13 +1,18 @@
 """Documentation check service.
 
-Accepts URL to PDF, DOCX, or Markdown. Downloads (with limits), extracts text
-and checks the minimum requirements per TZ section 3.
+Accepts a URL or a local file path to PDF, DOCX, or Markdown. Extracts text
+and validates the minimum requirements per TZ section 3:
+- required sections: system description, deployment, usage;
+- minimum volume (word count);
+- basic quality: section length, images/diagrams present.
 """
 from __future__ import annotations
 
 import io
 import logging
+import os
 import re
+from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
@@ -16,9 +21,11 @@ logger = logging.getLogger(__name__)
 
 MIN_WORDS = 800
 
-DESC_KEYS = ["описание системы", "system description", "описание", "обзор", "overview", "introduction"]
-DEPLOY_KEYS = ["развертывание", "deployment", "deploy", "install", "установка"]
-USAGE_KEYS = ["эксплуатация", "использование", "usage", "operation", "how to run", "запуск"]
+# Stems (substring match) so inflected Russian forms also count, e.g.
+# "развёртыванию", "эксплуатации", "установка".
+DESC_KEYS = ["описани", "обзор", "overview", "introduction", "system description"]
+DEPLOY_KEYS = ["развёрт", "разверт", "deployment", "deploy", "install", "установ"]
+USAGE_KEYS = ["эксплуатац", "использован", "usage", "operation", "how to run", "запуск"]
 
 
 def _fetch(url: str) -> bytes | None:
@@ -32,37 +39,23 @@ def _fetch(url: str) -> bytes | None:
         return None
 
 
-def _extract_pdf(data: bytes) -> str:
-    try:
-        from PyPDF2 import PdfReader  # type: ignore
-
-        reader = PdfReader(io.BytesIO(data))
-        return "\n".join((p.extract_text() or "") for p in reader.pages)
-    except Exception as exc:
-        logger.warning("pdf extract failed: %s", exc)
-        return ""
-
-
-def _extract_docx(data: bytes) -> str:
-    try:
-        from docx import Document  # type: ignore
-
-        doc = Document(io.BytesIO(data))
-        return "\n".join(p.text for p in doc.paragraphs)
-    except Exception as exc:
-        logger.warning("docx extract failed: %s", exc)
-        return ""
+def _load(source: str) -> tuple[bytes | None, str]:
+    """Return (bytes, error). Supports local file paths and http(s) URLs."""
+    if os.path.exists(source):
+        try:
+            return Path(source).read_bytes(), ""
+        except Exception as exc:  # pragma: no cover
+            return None, f"failed to read file: {exc}"
+    if not source.lower().startswith(("http://", "https://")):
+        return None, "source is neither a local file nor an http(s) url"
+    data = _fetch(source)
+    if not data:
+        return None, "failed to fetch docs"
+    return data, ""
 
 
-def _extract_md(data: bytes) -> str:
-    try:
-        return data.decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
-
-
-def _format_from_url(url: str) -> str:
-    path = urlparse(url).path.lower()
+def _format_from_source(source: str) -> str:
+    path = urlparse(source).path.lower() if "://" in source else source.lower()
     if path.endswith(".pdf"):
         return "pdf"
     if path.endswith(".docx"):
@@ -70,68 +63,116 @@ def _format_from_url(url: str) -> str:
     return "md"
 
 
+def _extract_pdf(data: bytes) -> tuple[str, int]:
+    try:
+        from PyPDF2 import PdfReader  # type: ignore
+
+        reader = PdfReader(io.BytesIO(data))
+        text = "\n".join((p.extract_text() or "") for p in reader.pages)
+        images = 0
+        for p in reader.pages:
+            try:
+                images += len(p.images)
+            except Exception:
+                pass
+        return text, images
+    except Exception as exc:
+        logger.warning("pdf extract failed: %s", exc)
+        return "", 0
+
+
+def _extract_docx(data: bytes) -> tuple[str, int]:
+    try:
+        from docx import Document  # type: ignore
+
+        doc = Document(io.BytesIO(data))
+        text = "\n".join(p.text for p in doc.paragraphs)
+        try:
+            images = len(doc.inline_shapes)
+        except Exception:
+            images = 0
+        return text, images
+    except Exception as exc:
+        logger.warning("docx extract failed: %s", exc)
+        return "", 0
+
+
+def _extract_md(data: bytes) -> tuple[str, int]:
+    try:
+        text = data.decode("utf-8", errors="ignore")
+    except Exception:
+        return "", 0
+    images = len(re.findall(r"!\[[^\]]*\]\([^)]+\)", text)) + len(
+        re.findall(r"<img\b", text, flags=re.IGNORECASE)
+    )
+    return text, images
+
+
 def _has_any(text: str, keys: list[str]) -> bool:
     t = text.lower()
     return any(k in t for k in keys)
 
 
-def _image_count(text: str) -> int:
-    return len(re.findall(r"!\[[^\]]*\]\([^)]+\)", text)) + len(re.findall(r"<img\b", text, flags=re.IGNORECASE))
+def _skipped(msg: str, fmt: str = "") -> dict:
+    return {
+        "status": "skipped",
+        "score": 0.0,
+        "word_count": 0,
+        "has_description": False,
+        "has_deploy": False,
+        "has_usage": False,
+        "image_count": 0,
+        "fmt": fmt,
+        "message": msg,
+    }
 
 
-def run_doc_check(url: str | None) -> dict:
-    if not url:
-        return {
-            "status": "skipped",
-            "score": 0.0,
-            "word_count": 0,
-            "has_description": False,
-            "has_deploy": False,
-            "has_usage": False,
-            "image_count": 0,
-            "fmt": "",
-            "message": "no docs url provided",
-        }
-    data = _fetch(url)
+def run_doc_check(source: str | None) -> dict:
+    if not source:
+        return _skipped("no docs url or file provided")
+    data, err = _load(source)
+    fmt = _format_from_source(source)
     if not data:
-        return {
-            "status": "error",
-            "score": 0.0,
-            "word_count": 0,
-            "has_description": False,
-            "has_deploy": False,
-            "has_usage": False,
-            "image_count": 0,
-            "fmt": _format_from_url(url),
-            "message": "failed to fetch docs",
-        }
-    fmt = _format_from_url(url)
+        return {**_skipped(err or "failed to load docs", fmt), "status": "error"}
+
     if fmt == "pdf":
-        text = _extract_pdf(data)
+        text, images = _extract_pdf(data)
     elif fmt == "docx":
-        text = _extract_docx(data)
+        text, images = _extract_docx(data)
     else:
-        text = _extract_md(data)
+        text, images = _extract_md(data)
+
     words = len(re.findall(r"\b\w+\b", text))
     has_desc = _has_any(text, DESC_KEYS)
     has_deploy = _has_any(text, DEPLOY_KEYS)
     has_usage = _has_any(text, USAGE_KEYS)
-    images = _image_count(text)
 
+    # required sections: 2 points each
     score = 0.0
     if has_desc:
-        score += 2.5
+        score += 2.0
     if has_deploy:
-        score += 2.5
+        score += 2.0
     if has_usage:
-        score += 2.5
+        score += 2.0
+    # volume: up to 2 points
     if words >= MIN_WORDS:
-        score += 1.5
+        score += 2.0
     elif words > 0:
-        score += max(0.0, 1.5 * (words / MIN_WORDS))
+        score += round(2.0 * (words / MIN_WORDS), 2)
+    # images / diagrams: up to 2 points
     if images >= 2:
+        score += 2.0
+    elif images == 1:
         score += 1.0
     score = min(10.0, round(score, 2))
+
+    missing = [
+        name
+        for name, ok in (("описание", has_desc), ("развёртывание", has_deploy), ("эксплуатация", has_usage))
+        if not ok
+    ]
+    msg = "ok" if not missing else "нет разделов: " + ", ".join(missing)
 
     return {
         "status": "done",
@@ -142,5 +183,5 @@ def run_doc_check(url: str | None) -> dict:
         "has_usage": has_usage,
         "image_count": images,
         "fmt": fmt,
-        "message": "ok",
+        "message": msg,
     }

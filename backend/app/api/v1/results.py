@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.hackathon import Hackathon
+from app.models.jury import JuryScore
 from app.models.submission import (
     CodeCheck,
     DocCheck,
@@ -85,7 +86,18 @@ async def my_results(
         )
     )
     rows = (await db.execute(q)).scalars().unique().all()
-    return [_submission_out(s) for s in rows]
+    out: list[SubmissionOut] = []
+    for s in rows:
+        item = _submission_out(s)
+        jscores = (
+            await db.execute(select(JuryScore).where(JuryScore.team_id == s.team_id))
+        ).scalars().all()
+        if jscores:
+            item.jury_score = round(
+                sum((j.design + j.pitch + j.complexity) / 3 for j in jscores) / len(jscores), 2
+            )
+        out.append(item)
+    return out
 
 
 @router.get("/hackathons/{hackathon_id}/ranking", response_model=list[TeamResultOut])
@@ -151,7 +163,7 @@ async def hackathon_winners(
 ) -> list[HackathonWinnerOut]:
     ranking = await hackathon_ranking(hackathon_id, db, user)
     top = [r for r in ranking if r.final_score > 0][:3]
-    prizes = ["250,000 ₽", "150,000 ₽", "100,000 ₽"]
+    prizes = ["250 000 ₽", "150 000 ₽", "100 000 ₽"]
     return [
         HackathonWinnerOut(rank=i + 1, team_id=r.team_id, team_name=r.team_name, final_score=r.final_score)
         for i, r in enumerate(top)

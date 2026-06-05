@@ -34,8 +34,26 @@ export function ResultsPage() {
     setRerunning(id);
     try {
       await api.post(`/results/submissions/${id}/rerun`);
-      toast.success("Проверки перезапущены");
-      setTimeout(reload, 1500);
+      toast.success("Проверки перезапущены, ожидаем результат...");
+      // checks run asynchronously — poll until this submission settles
+      let settled = false;
+      for (let i = 0; i < 15; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const fresh = await api.get<Submission[]>("/results/me");
+          const s = fresh.find((x) => x.id === id);
+          if (s && s.status !== "pending" && s.status !== "evaluating") {
+            settled = true;
+            break;
+          }
+        } catch {
+          // keep polling
+        }
+      }
+      reload();
+      toast[settled ? "success" : "message"](
+        settled ? "Перепроверка завершена" : "Проверка ещё идёт — обновите статус позже",
+      );
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
     } finally {
@@ -66,8 +84,7 @@ export function ResultsPage() {
             const team = teamById(s.team_id);
             const hack = team ? hackById(team.hackathon_id) : undefined;
             const badge = statusBadge(s.status);
-            // TODO: jury average is not yet exposed on /results/me; will be wired up next iteration.
-            const juryAvg: number | null = null as number | null;
+            const juryAvg: number | null = s.jury_score;
             return (
               <div
                 key={s.id}
@@ -99,17 +116,23 @@ export function ResultsPage() {
                       <badge.Icon size={18} />
                       {badge.label}
                     </div>
-                    <button
-                      onClick={() => handleRerun(s.id)}
-                      disabled={rerunning === s.id}
-                      title="Перезапустить авто-проверки"
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <RefreshCw
-                        size={18}
-                        className={rerunning === s.id ? "animate-spin" : ""}
-                      />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => reload()}
+                        title="Обновить статус"
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                      >
+                        <RefreshCw size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleRerun(s.id)}
+                        disabled={rerunning === s.id}
+                        title="Перезапустить авто-проверки заново"
+                        className="px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                      >
+                        {rerunning === s.id ? "..." : "Перепроверить"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -133,7 +156,7 @@ export function ResultsPage() {
                           score={s.code_check?.score}
                           extra={
                             s.code_check
-                              ? `LOC: ${s.code_check.loc}, секретов: ${s.code_check.secrets_found}`
+                              ? `LOC: ${s.code_check.loc}, линтер: ${s.code_check.lint_issues}, секретов: ${s.code_check.secrets_found}`
                               : ""
                           }
                         />

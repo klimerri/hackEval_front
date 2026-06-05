@@ -31,10 +31,17 @@ export interface Hackathon {
   image_url: string;
   type: string;
   coefficients: Record<string, number>;
+  jury_criteria: Criterion[];
   max_team_size: number;
   organizer_id: number;
   teams_count: number;
   jury_count: number;
+}
+
+export interface Criterion {
+  key: string;
+  label: string;
+  weight: number;
 }
 
 export type TeamStatus = 'pending' | 'approved' | 'rejected';
@@ -59,6 +66,8 @@ export interface Team {
   presentation_url: string | null;
   video_url: string | null;
   notes: string;
+  has_archive: boolean;
+  has_doc_file: boolean;
   applied_at: string;
   decided_at: string | null;
   members: TeamMember[];
@@ -75,6 +84,7 @@ export interface CodeCheck {
   has_run_instructions: boolean;
   loc: number;
   avg_complexity: number;
+  lint_issues: number;
   secrets_found: number;
   message: string;
 }
@@ -119,6 +129,7 @@ export interface Submission {
   team_id: number;
   status: SubmissionStatus;
   auto_score: number;
+  jury_score: number | null;
   final_score: number;
   rank: number | null;
   created_at: string;
@@ -218,6 +229,7 @@ export interface JuryCheckCode {
   status: string;
   score: number | null;
   loc: number;
+  lint_issues: number;
   secrets_found: number;
   has_readme: boolean;
 }
@@ -257,7 +269,7 @@ export interface JuryTeam {
   presentation: string | null;
   status: 'evaluated' | 'pending';
   checks: JuryChecks | null;
-  my_score: { design: number; pitch: number; complexity: number; comment: string } | null;
+  my_score: { scores: Record<string, number>; comment: string } | null;
 }
 
 export type NotificationType =

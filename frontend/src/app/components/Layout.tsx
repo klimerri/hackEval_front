@@ -9,6 +9,7 @@ import {
   User,
   Shield,
   UserCheck,
+  Medal,
   Menu,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ export function Layout() {
   const navItems = [
     { name: "Дашборд", path: "/", icon: LayoutDashboard },
     { name: "Хакатоны", path: "/hackathons", icon: Trophy },
+    { name: "Рейтинг", path: "/leaderboard", icon: Medal },
     ...(user?.role === "participant"
       ? [
           { name: "Команды", path: "/teams", icon: Users },

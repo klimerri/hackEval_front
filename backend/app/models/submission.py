@@ -76,6 +76,7 @@ class CodeCheck(_CheckBase, Base):
     has_run_instructions: Mapped[bool] = mapped_column(default=False)
     loc: Mapped[int] = mapped_column(default=0)
     avg_complexity: Mapped[float] = mapped_column(default=0.0)
+    lint_issues: Mapped[int] = mapped_column(default=0)
     secrets_found: Mapped[int] = mapped_column(default=0)
 
 

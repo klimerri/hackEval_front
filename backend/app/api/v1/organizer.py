@@ -206,5 +206,5 @@ async def analytics(
         "total_applications": sum(i["students"] for i in items),
         "avg_score": 7.8,
         "active_jury": jury_total,
-        "prize_pool_total": "2.5M",
+        "prize_pool_total": "2 500 000 ₽",
     }

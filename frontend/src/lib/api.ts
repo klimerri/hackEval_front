@@ -80,8 +80,32 @@ function safeJson(s: string) {
   return safejson_(s);
 }
 
+async function requestForm<T>(path: string, formData: FormData, auth = true): Promise<T> {
+  const headers = new Headers();
+  if (auth) {
+    const token = getToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+  }
+  // Intentionally do NOT set Content-Type: the browser adds the multipart boundary.
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const res = await fetch(url, { method: 'POST', body: formData, headers });
+  if (res.status === 204) return undefined as unknown as T;
+  const text = await res.text();
+  const data = text ? safeJson(text) : null;
+  if (!res.ok) {
+    const detail =
+      data && typeof data === 'object' && 'detail' in data
+        ? String((data as { detail: unknown }).detail)
+        : res.statusText;
+    if (res.status === 401) clearSession();
+    throw new ApiError(res.status, detail, data);
+  }
+  return data as T;
+}
+
 export const api = {
   get: <T>(path: string, auth = true) => request<T>(path, { method: 'GET' }, { auth }),
+  upload: <T>(path: string, formData: FormData, auth = true) => requestForm<T>(path, formData, auth),
   post: <T>(path: string, body?: unknown, auth = true) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }, { auth }),
   put: <T>(path: string, body?: unknown, auth = true) =>

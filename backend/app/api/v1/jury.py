@@ -40,6 +40,7 @@ def _checks_summary(sub: Submission | None) -> dict | None:
             "status": _st(code),
             "score": _score(code),
             "loc": code.loc if code else 0,
+            "lint_issues": code.lint_issues if code else 0,
             "secrets_found": code.secrets_found if code else 0,
             "has_readme": bool(code.has_readme) if code else False,
         },
@@ -138,11 +139,16 @@ async def list_teams_for_jury(
                 "status": "evaluated" if my_score else "pending",
                 "checks": _checks_summary(sub),
                 "my_score": {
-                    "design": my_score.design,
-                    "pitch": my_score.pitch,
-                    "complexity": my_score.complexity,
+                    "scores": my_score.scores
+                    or {
+                        "design": my_score.design,
+                        "pitch": my_score.pitch,
+                        "complexity": my_score.complexity,
+                    },
                     "comment": my_score.comment,
-                } if my_score else None,
+                }
+                if my_score
+                else None,
             }
         )
     return result
@@ -160,21 +166,25 @@ async def save_score(
         raise HTTPException(status_code=404, detail="team not found")
     if user.role not in (UserRole.JURY, UserRole.ORGANIZER):
         raise HTTPException(status_code=403, detail="jury only")
+    scores = payload.scores or {}
     existing = (
         await db.execute(select(JuryScore).where(JuryScore.team_id == team_id, JuryScore.jury_id == user.id))
     ).scalar_one_or_none()
     if existing:
-        existing.design = payload.design
-        existing.pitch = payload.pitch
-        existing.complexity = payload.complexity
+        existing.scores = scores
         existing.comment = payload.comment
+        # keep legacy columns roughly in sync for back-compat
+        existing.design = int(scores.get("design", 0))
+        existing.pitch = int(scores.get("pitch", 0))
+        existing.complexity = int(scores.get("complexity", 0))
     else:
         existing = JuryScore(
             team_id=team_id,
             jury_id=user.id,
-            design=payload.design,
-            pitch=payload.pitch,
-            complexity=payload.complexity,
+            scores=scores,
+            design=int(scores.get("design", 0)),
+            pitch=int(scores.get("pitch", 0)),
+            complexity=int(scores.get("complexity", 0)),
             comment=payload.comment,
         )
         db.add(existing)
@@ -187,8 +197,6 @@ async def save_score(
         team_id=existing.team_id,
         jury_id=existing.jury_id,
         jury_name=jury_user.name,
-        design=existing.design,
-        pitch=existing.pitch,
-        complexity=existing.complexity,
+        scores=existing.scores or {},
         comment=existing.comment,
     )

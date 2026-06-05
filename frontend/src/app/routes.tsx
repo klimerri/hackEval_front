@@ -8,6 +8,7 @@ import { HackathonDetailPage } from "../pages/HackathonDetailPage";
 import { ResultsPage } from "../pages/ResultsPage";
 import { OrganizerPage } from "../pages/OrganizerPage";
 import { OrganizerTeamsPage } from "../pages/OrganizerTeamsPage";
+import { LeaderboardPage } from "../pages/LeaderboardPage";
 import { JuryPage } from "../pages/JuryPage";
 import { getToken } from "../lib/api";
 import { ReactNode } from "react";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { index: true, Component: DashboardPage },
       { path: "hackathons", Component: HackathonListPage },
       { path: "hackathons/:id", Component: HackathonDetailPage },
+      { path: "leaderboard", Component: LeaderboardPage },
       {
         path: "teams",
         element: (

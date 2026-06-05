@@ -31,11 +31,12 @@ from app.models.user import User, UserRole
 
 HACKATHONS = [
     {
-        "title": "AI Innovation Hack 2024",
+        "title": "AI Innovation Hack 2026",
         "description": "Создание инновационных решений на базе генеративного ИИ для бизнеса.",
-        "date_offset_days": 10,
-        "duration_days": 3,
-        "prize_pool": "500,000 ₽",
+        # currently ongoing (started 2 days ago) so artifact uploads are allowed
+        "date_offset_days": -2,
+        "duration_days": 7,
+        "prize_pool": "500 000 ₽",
         "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=800",
         "type": "Online",
         "tags": ["AI", "Python", "LLM"],
@@ -45,7 +46,7 @@ HACKATHONS = [
         "description": "Разработка децентрализованных приложений на базе блокчейна Ethereum.",
         "date_offset_days": 25,
         "duration_days": 3,
-        "prize_pool": "300,000 ₽",
+        "prize_pool": "300 000 ₽",
         "image": "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=800",
         "type": "Hybrid",
         "tags": ["Web3", "Solidity", "DApp"],
@@ -55,7 +56,7 @@ HACKATHONS = [
         "description": "Хакатон по разработке IT-решений для улучшения экологии городов.",
         "date_offset_days": 40,
         "duration_days": 3,
-        "prize_pool": "1,000,000 ₽",
+        "prize_pool": "1 000 000 ₽",
         "image": "https://images.unsplash.com/photo-1542601906990-b4d3fb773b09?auto=format&fit=crop&q=80&w=800",
         "type": "Offline",
         "tags": ["IoT", "Data Science", "Green"],
@@ -65,7 +66,7 @@ HACKATHONS = [
         "description": "Соревнования по поиску уязвимостей и защите информационных систем.",
         "date_offset_days": 55,
         "duration_days": 3,
-        "prize_pool": "400,000 ₽",
+        "prize_pool": "400 000 ₽",
         "image": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800",
         "type": "Online",
         "tags": ["Security", "Linux", "Network"],
@@ -115,9 +116,18 @@ async def main() -> None:
         # rest of the seed is skipped on an already-seeded database.
         await db.commit()
 
-        # Make sure the reviewer is attached to the earliest hackathon (idempotent).
+        # Idempotent fixups on the earliest hackathon (also runs on re-seed).
         first_hack = (await db.execute(select(Hackathon).order_by(Hackathon.id))).scalars().first()
         if first_hack:
+            # rename legacy title 2024 -> 2026
+            if "2024" in (first_hack.title or ""):
+                first_hack.title = first_hack.title.replace("2024", "2026")
+            # keep the first hackathon currently ongoing so uploads are testable
+            now_ts = datetime.now(timezone.utc)
+            first_hack.start_date = now_ts - timedelta(days=2)
+            first_hack.end_date = now_ts + timedelta(days=5)
+            first_hack.submission_deadline = now_ts + timedelta(days=5) - timedelta(hours=2)
+            first_hack.status = HackathonStatus.ACTIVE
             assigned = (
                 await db.execute(
                     select(JuryAssignment).where(
@@ -128,7 +138,7 @@ async def main() -> None:
             ).scalar_one_or_none()
             if not assigned:
                 db.add(JuryAssignment(hackathon_id=first_hack.id, user_id=reviewer.id))
-                await db.commit()
+            await db.commit()
 
         existing_h = (await db.execute(select(Hackathon).where(Hackathon.title == HACKATHONS[0]["title"]))).scalar_one_or_none()
         if existing_h:
@@ -272,6 +282,7 @@ async def main() -> None:
                 JuryScore(
                     team_id=team.id,
                     jury_id=j.id,
+                    scores={"design": d, "pitch": p, "complexity": c},
                     design=d,
                     pitch=p,
                     complexity=c,
@@ -279,17 +290,17 @@ async def main() -> None:
                 )
             )
 
+        from app.services.scoring import combine_scores, jury_value_for
+
         for t in teams[:3]:
             sub = (await db.execute(select(Submission).where(Submission.team_id == t.id))).scalar_one()
             scores = (await db.execute(select(JuryScore).where(JuryScore.team_id == t.id))).scalars().all()
-            jury_avg = sum((s.design + s.pitch + s.complexity) / 3 for s in scores) / len(scores) if scores else 0.0
             hack = (await db.execute(select(Hackathon).where(Hackathon.id == t.hackathon_id))).scalar_one()
-            coefs = hack.coefficients or {"code": 40, "design": 30, "pitch": 30}
-            total = max(1, sum(int(v) for v in coefs.values()))
-            sub.final_score = round(
-                (sub.auto_score * int(coefs["code"]) + jury_avg * (int(coefs["design"]) + int(coefs["pitch"]))) / total,
-                2,
+            criteria = hack.jury_criteria or []
+            jury_avg = (
+                sum(jury_value_for(s, criteria) for s in scores) / len(scores) if scores else 0.0
             )
+            sub.final_score = combine_scores(sub.auto_score, jury_avg)
 
         algo_task = AlgorithmTask(
             hackathon_id=created_hackathons[0].id,

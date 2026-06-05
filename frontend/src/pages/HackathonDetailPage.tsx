@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
-  Github,
-  FileText,
-  Presentation,
-  Video,
-  Send,
   ChevronLeft,
   CheckCircle2,
   AlertCircle,
@@ -28,7 +23,7 @@ export function HackathonDetailPage() {
   const { user } = useAuth();
   const hackathonId = Number(id);
 
-  const { data: hackathon, loading, error, reload } = useApi<Hackathon>(
+  const { data: hackathon, loading, error } = useApi<Hackathon>(
     hackathonId ? `/hackathons/${hackathonId}` : null,
     [hackathonId],
   );
@@ -50,22 +45,6 @@ export function HackathonDetailPage() {
   const [newTeamName, setNewTeamName] = useState("");
   const [joinMessage, setJoinMessage] = useState("");
   const [requestedTeamIds, setRequestedTeamIds] = useState<Set<number>>(new Set());
-  const [form, setForm] = useState({
-    github: myTeam?.github_url ?? "",
-    docs: myTeam?.docs_url ?? "",
-    presentation: myTeam?.presentation_url ?? "",
-    video: myTeam?.video_url ?? "",
-  });
-
-  // keep form in sync when team loads
-  if (myTeam && !form.github && myTeam.github_url) {
-    setForm({
-      github: myTeam.github_url,
-      docs: myTeam.docs_url ?? "",
-      presentation: myTeam.presentation_url ?? "",
-      video: myTeam.video_url ?? "",
-    });
-  }
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) {
@@ -99,26 +78,6 @@ export function HackathonDetailPage() {
     }
   };
 
-  const handleSubmitArtifacts = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!myTeam) return;
-    setSubmitting(true);
-    try {
-      await api.put<Team>(`/teams/${myTeam.id}/submission`, {
-        github_url: form.github || null,
-        docs_url: form.docs || null,
-        presentation_url: form.presentation || null,
-        video_url: form.video || null,
-      });
-      toast.success("Проект отправлен на проверку");
-      reload();
-      reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Ошибка отправки");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) return <div className="text-gray-400">Загрузка...</div>;
   if (error) return <div className="text-red-500">Ошибка: {error}</div>;
@@ -330,110 +289,26 @@ export function HackathonDetailPage() {
           )}
 
           {applicationStatus === "approved" && myTeam && (
-            <form
-              onSubmit={handleSubmitArtifacts}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-in zoom-in-95 duration-300"
-            >
-              <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Подача артефактов</h2>
-                  <p className="text-sm text-gray-500">
-                    Прикрепите все необходимые ссылки для оценки проекта.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
-                  <CheckCircle2 size={16} />
-                  <span className="text-xs font-bold uppercase">Участие одобрено</span>
-                </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center space-y-5 animate-in zoom-in-95 duration-300">
+              <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} />
               </div>
-
-              <div className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Github size={18} className="text-gray-400" />
-                    Ссылка на репозиторий (GitHub / GitLab)
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://github.com/username/project"
-                    value={form.github}
-                    onChange={(e) => setForm({ ...form, github: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <FileText size={18} className="text-gray-400" />
-                    Документация (Google Docs / Notion / PDF link)
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://notion.so/project-docs"
-                    value={form.docs}
-                    onChange={(e) => setForm({ ...form, docs: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Presentation size={18} className="text-gray-400" />
-                      Презентация
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://canva.com/..."
-                      value={form.presentation}
-                      onChange={(e) => setForm({ ...form, presentation: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Video size={18} className="text-gray-400" />
-                      Видео-демо
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://youtube.com/..."
-                      value={form.video}
-                      onChange={(e) => setForm({ ...form, video: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className={cn(
-                      "w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg",
-                      submitting
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200",
-                    )}
-                  >
-                    {submitting ? (
-                      "Отправка..."
-                    ) : (
-                      <>
-                        <Send size={20} />
-                        Отправить на проверку
-                      </>
-                    )}
-                  </button>
-                  <p className="text-center text-xs text-gray-400 mt-4">
-                    Ссылку можно обновить до окончания дедлайна.
-                  </p>
-                </div>
+              <div className="space-y-2 max-w-sm mx-auto">
+                <h2 className="text-xl font-bold text-gray-900">Участие одобрено</h2>
+                <p className="text-gray-500">
+                  Команда «{myTeam.name}» допущена. Загрузка и обновление артефактов
+                  решения — в личном кабинете команды.
+                </p>
               </div>
-            </form>
+              <button
+                onClick={() => navigate("/teams")}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+              >
+                Перейти в Командный центр
+                <ArrowRight size={20} />
+              </button>
+            </div>
           )}
-
           {applicationStatus === "rejected" && (
             <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-20 text-center space-y-4">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">

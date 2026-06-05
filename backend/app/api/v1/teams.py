@@ -1,12 +1,14 @@
 import secrets
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_organizer, require_participant
 from app.models.hackathon import Hackathon
@@ -38,6 +40,23 @@ from app.services.notify import notify, notify_many
 router = APIRouter()
 
 
+def _archive_path(team_id: int) -> Path:
+    return Path(settings.upload_dir) / f"team_{team_id}" / "code.zip"
+
+
+DOC_EXTS = (".pdf", ".docx", ".md")
+
+
+def _doc_file_path(team_id: int) -> Path | None:
+    """Return the uploaded documentation file for a team, if any."""
+    base = Path(settings.upload_dir) / f"team_{team_id}"
+    for ext in DOC_EXTS:
+        p = base / f"docs{ext}"
+        if p.exists():
+            return p
+    return None
+
+
 def _team_out(team: Team) -> TeamOut:
     return TeamOut(
         id=team.id,
@@ -50,6 +69,8 @@ def _team_out(team: Team) -> TeamOut:
         presentation_url=team.presentation_url,
         video_url=team.video_url,
         notes=team.notes,
+        has_archive=_archive_path(team.id).exists(),
+        has_doc_file=_doc_file_path(team.id) is not None,
         applied_at=team.applied_at,
         decided_at=team.decided_at,
         members=[
@@ -573,6 +594,44 @@ async def remove_member(
     return _team_out(team)
 
 
+async def _assert_can_submit(db: AsyncSession, team_id: int, user: User) -> tuple[Team, Hackathon]:
+    """Common guard for artifact submission: member + approved + before deadline."""
+    team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="team not found")
+    is_member = (
+        await db.execute(
+            select(TeamMember).where(TeamMember.team_id == team.id, TeamMember.user_id == user.id)
+        )
+    ).scalar_one_or_none()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="not a team member")
+    hack = (await db.execute(select(Hackathon).where(Hackathon.id == team.hackathon_id))).scalar_one()
+    if team.status != TeamStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="team not approved")
+    now = datetime.now(timezone.utc)
+    # Uploads are allowed only while the hackathon is ongoing (registration is not).
+    if now < hack.start_date:
+        raise HTTPException(status_code=400, detail="hackathon has not started yet")
+    if now > hack.submission_deadline:
+        raise HTTPException(status_code=400, detail="submission deadline passed")
+    return team, hack
+
+
+async def _ensure_submission(db: AsyncSession, team_id: int) -> tuple[Submission, bool]:
+    """Return (submission, created). `created` is True on first submission."""
+    sub = (
+        await db.execute(select(Submission).where(Submission.team_id == team_id))
+    ).scalar_one_or_none()
+    if not sub:
+        sub = Submission(team_id=team_id)
+        db.add(sub)
+        await db.commit()
+        await db.refresh(sub)
+        return sub, True
+    return sub, False
+
+
 @router.put("/{team_id}/submission", response_model=TeamOut)
 async def update_submission(
     team_id: int,
@@ -580,26 +639,178 @@ async def update_submission(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> TeamOut:
-    team = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
-    if not team:
-        raise HTTPException(status_code=404, detail="team not found")
-    is_member = (await db.execute(select(TeamMember).where(TeamMember.team_id == team.id, TeamMember.user_id == user.id))).scalar_one_or_none()
-    if not is_member:
-        raise HTTPException(status_code=403, detail="not a team member")
-    hack = (await db.execute(select(Hackathon).where(Hackathon.id == team.hackathon_id))).scalar_one()
-    if team.status != TeamStatus.APPROVED:
-        raise HTTPException(status_code=400, detail="team not approved")
-    if datetime.now(timezone.utc) > hack.submission_deadline:
-        raise HTTPException(status_code=400, detail="submission deadline passed")
+    team, _hack = await _assert_can_submit(db, team_id, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(team, field, value)
-    if not team.submission:
-        submission = Submission(team_id=team.id)
-        db.add(submission)
+    # A team uses EITHER a Git URL OR an uploaded archive — providing a repo URL
+    # drops any previously uploaded archive so there is a single code source.
+    if team.github_url:
+        archive = _archive_path(team_id)
+        if archive.exists():
+            archive.unlink()
+    # Same rule for documentation: a link drops a previously uploaded doc file.
+    if team.docs_url:
+        doc = _doc_file_path(team_id)
+        if doc:
+            doc.unlink()
     await db.commit()
+    sub, created = await _ensure_submission(db, team_id)
+    # Re-run only the checks whose artifact was provided (all on first submission).
+    only: set[str] | None
+    if created:
+        only = None
+    else:
+        data = payload.model_dump(exclude_unset=True)
+        only = set()
+        if data.get("github_url"):
+            only.add("code")
+        if data.get("docs_url"):
+            only.add("docs")
+        if data.get("presentation_url"):
+            only.add("presentation")
+        if data.get("video_url"):
+            only.add("video")
+    from app.workers.dispatcher import dispatch_checks
+
+    if only is None or only:
+        await dispatch_checks(team_id, sub.id, only)
     team = (
         await db.execute(
             select(Team).where(Team.id == team.id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.post("/{team_id}/submission/archive", response_model=TeamOut)
+async def upload_archive(
+    team_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Upload a project archive (.zip) instead of (or in addition to) a Git URL.
+
+    The archive is stored under the uploads volume and the code check runs
+    against it. Only zip files are accepted; the content is never executed.
+    """
+    team, _hack = await _assert_can_submit(db, team_id, user)
+
+    name = (file.filename or "").lower()
+    if not name.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="only .zip archives are accepted")
+
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=400, detail=f"archive exceeds {settings.max_upload_mb} MB")
+    if data[:4] != b"PK\x03\x04":
+        raise HTTPException(status_code=400, detail="file is not a valid zip archive")
+
+    team_dir = Path(settings.upload_dir) / f"team_{team_id}"
+    team_dir.mkdir(parents=True, exist_ok=True)
+    (team_dir / "code.zip").write_bytes(data)
+
+    # Using an archive ⇒ drop the Git URL so there is a single code source.
+    team.github_url = None
+    await db.commit()
+
+    sub, created = await _ensure_submission(db, team_id)
+    from app.workers.dispatcher import dispatch_checks
+
+    # only re-run the code check (all checks on first submission)
+    await dispatch_checks(team_id, sub.id, None if created else {"code"})
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.delete("/{team_id}/submission/archive", response_model=TeamOut)
+async def delete_archive(
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Remove the uploaded archive so the team can switch back to a Git URL."""
+    team, _hack = await _assert_can_submit(db, team_id, user)
+    archive = _archive_path(team_id)
+    if archive.exists():
+        archive.unlink()
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.post("/{team_id}/submission/docs", response_model=TeamOut)
+async def upload_docs(
+    team_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Upload a documentation file (PDF / DOCX / Markdown) instead of a URL."""
+    team, _hack = await _assert_can_submit(db, team_id, user)
+
+    name = (file.filename or "").lower()
+    ext = next((e for e in DOC_EXTS if name.endswith(e)), None)
+    if ext is None:
+        raise HTTPException(status_code=400, detail="only .pdf, .docx or .md files are accepted")
+
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=400, detail=f"file exceeds {settings.max_upload_mb} MB")
+    # light magic-byte validation
+    if ext == ".pdf" and not data.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="file is not a valid PDF")
+    if ext == ".docx" and data[:4] != b"PK\x03\x04":
+        raise HTTPException(status_code=400, detail="file is not a valid DOCX")
+
+    team_dir = Path(settings.upload_dir) / f"team_{team_id}"
+    team_dir.mkdir(parents=True, exist_ok=True)
+    # remove any previous doc file (different extension) then write the new one
+    existing = _doc_file_path(team_id)
+    if existing:
+        existing.unlink()
+    (team_dir / f"docs{ext}").write_bytes(data)
+
+    # using an uploaded doc ⇒ drop the docs URL (single source)
+    team.docs_url = None
+    await db.commit()
+
+    sub, created = await _ensure_submission(db, team_id)
+    from app.workers.dispatcher import dispatch_checks
+
+    # only re-run the documentation check (all checks on first submission)
+    await dispatch_checks(team_id, sub.id, None if created else {"docs"})
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
+        )
+    ).scalar_one()
+    return _team_out(team)
+
+
+@router.delete("/{team_id}/submission/docs", response_model=TeamOut)
+async def delete_docs(
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TeamOut:
+    """Remove the uploaded documentation file so the team can use a URL again."""
+    team, _hack = await _assert_can_submit(db, team_id, user)
+    doc = _doc_file_path(team_id)
+    if doc:
+        doc.unlink()
+    team = (
+        await db.execute(
+            select(Team).where(Team.id == team_id).options(selectinload(Team.members).selectinload(TeamMember.user))
         )
     ).scalar_one()
     return _team_out(team)

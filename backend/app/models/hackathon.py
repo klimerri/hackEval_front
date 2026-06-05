@@ -14,6 +14,16 @@ class HackathonStatus(str, PyEnum):
     FINISHED = "finished"
 
 
+# Configurable JURY criteria (the organizer can add/remove/rename them and set
+# weights). The automatic checks are fixed and are NOT part of this list.
+# Default mirrors the previous behaviour (equal weights).
+DEFAULT_JURY_CRITERIA: list[dict] = [
+    {"key": "design", "label": "Дизайн и UX", "weight": 34},
+    {"key": "pitch", "label": "Питч и идея", "weight": 33},
+    {"key": "complexity", "label": "Техническая сложность", "weight": 33},
+]
+
+
 class Hackathon(Base):
     __tablename__ = "hackathons"
 
@@ -37,6 +47,7 @@ class Hackathon(Base):
     image_url: Mapped[str] = mapped_column(String(1024), default="")
     type: Mapped[str] = mapped_column(String(32), default="Online")
     coefficients: Mapped[dict] = mapped_column(JSONB, default=lambda: {"code": 40, "design": 30, "pitch": 30})
+    jury_criteria: Mapped[list] = mapped_column(JSONB, default=lambda: list(DEFAULT_JURY_CRITERIA))
     max_team_size: Mapped[int] = mapped_column(default=5)
     organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

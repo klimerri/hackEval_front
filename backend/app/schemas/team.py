@@ -40,6 +40,8 @@ class TeamOut(BaseModel):
     presentation_url: str | None = None
     video_url: str | None = None
     notes: str = ""
+    has_archive: bool = False
+    has_doc_file: bool = False
     applied_at: datetime
     decided_at: datetime | None = None
     members: list[TeamMemberOut] = []

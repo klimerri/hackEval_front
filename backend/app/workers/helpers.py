@@ -61,20 +61,13 @@ def finalise_submission(submission_id: int) -> None:
 
         team = db.get(Team, sub.team_id)
         if team:
+            from app.services.scoring import combine_scores, jury_value_for
+
             hack = db.get(Hackathon, team.hackathon_id)
-            coefs = hack.coefficients or {"code": 40, "design": 30, "pitch": 30}
-            code_w = int(coefs.get("code", 0))
-            design_w = int(coefs.get("design", 0))
-            pitch_w = int(coefs.get("pitch", 0))
-            total_w = max(1, code_w + design_w + pitch_w)
+            criteria = (hack.jury_criteria or []) if hack else []
             jury = db.query(JuryScore).filter(JuryScore.team_id == team.id).all()
             jury_avg = (
-                sum((j.design + j.pitch + j.complexity) / 3 for j in jury) / len(jury)
-                if jury
-                else 0.0
+                sum(jury_value_for(j, criteria) for j in jury) / len(jury) if jury else 0.0
             )
-            sub.final_score = round(
-                (sub.auto_score * code_w + jury_avg * (design_w + pitch_w)) / total_w,
-                2,
-            )
+            sub.final_score = combine_scores(sub.auto_score, jury_avg)
             db.commit()

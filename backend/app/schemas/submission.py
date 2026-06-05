@@ -17,6 +17,7 @@ class CodeCheckOut(BaseModel):
     has_run_instructions: bool = False
     loc: int = 0
     avg_complexity: float = 0.0
+    lint_issues: int = 0
     secrets_found: int = 0
     message: str = ""
 
@@ -83,6 +84,7 @@ class SubmissionOut(BaseModel):
     team_id: int
     status: str
     auto_score: float = 0.0
+    jury_score: float | None = None
     final_score: float = 0.0
     rank: int | None = None
     created_at: datetime
@@ -99,10 +101,14 @@ class SubmissionOut(BaseModel):
 
 
 class JuryScoreIn(BaseModel):
-    design: int = Field(0, ge=0, le=10)
-    pitch: int = Field(0, ge=0, le=10)
-    complexity: int = Field(0, ge=0, le=10)
+    # per-criterion scores keyed by criterion key, each 0..10
+    scores: dict[str, int] = Field(default_factory=dict)
     comment: str = ""
+
+    @field_validator("scores")
+    @classmethod
+    def _clamp(cls, v: dict) -> dict:
+        return {str(k): max(0, min(10, int(val))) for k, val in (v or {}).items()}
 
 
 class JuryScoreOut(BaseModel):
@@ -111,9 +117,7 @@ class JuryScoreOut(BaseModel):
     team_id: int
     jury_id: int
     jury_name: str = ""
-    design: int
-    pitch: int
-    complexity: int
+    scores: dict[str, int] = Field(default_factory=dict)
     comment: str
 
 
