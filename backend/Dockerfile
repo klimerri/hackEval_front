@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 20 for linting submitted JS/TS sources with ESLint.
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
+# Node.js + npm for linting submitted JS/TS sources with ESLint.
+# Debian's nodejs (18.x) satisfies ESLint 9; npm is a separate package there.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
