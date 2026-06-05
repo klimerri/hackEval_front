@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_organizer
-from app.models.hackathon import DEFAULT_JURY_CRITERIA, Hackathon, HackathonStatus
+from app.models.hackathon import (
+    DEFAULT_JURY_CRITERIA,
+    DEFAULT_PRESENTATION_SECTIONS,
+    Hackathon,
+    HackathonStatus,
+)
 from app.models.jury import JuryAssignment
 from app.models.team import Team
 from app.models.user import User, UserRole
@@ -30,6 +35,7 @@ def _to_out(h: Hackathon, teams_count: int, jury_count: int) -> HackathonOut:
         type=h.type,
         coefficients=h.coefficients or {"code": 40, "design": 30, "pitch": 30},
         jury_criteria=h.jury_criteria or list(DEFAULT_JURY_CRITERIA),
+        presentation_sections=h.presentation_sections or list(DEFAULT_PRESENTATION_SECTIONS),
         max_team_size=h.max_team_size,
         organizer_id=h.organizer_id,
         teams_count=teams_count,
@@ -85,6 +91,7 @@ async def create_hackathon(
         type=payload.type,
         coefficients=payload.coefficients,
         jury_criteria=[c.model_dump() for c in payload.jury_criteria],
+        presentation_sections=[s.model_dump() for s in payload.presentation_sections],
         max_team_size=payload.max_team_size,
         organizer_id=user.id,
     )

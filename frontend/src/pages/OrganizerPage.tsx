@@ -38,6 +38,7 @@ import type {
   JuryPoolUser,
   OrganizerAnalytics,
   OrgTeam,
+  PresentationSection,
 } from "../lib/types";
 
 type Tab = "events" | "members" | "analytics";
@@ -57,6 +58,8 @@ export function OrganizerPage() {
   const [busy, setBusy] = useState(false);
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [critDirty, setCritDirty] = useState(false);
+  const [sections, setSections] = useState<PresentationSection[]>([]);
+  const [secDirty, setSecDirty] = useState(false);
 
   const [newHack, setNewHack] = useState({
     title: "",
@@ -93,6 +96,8 @@ export function OrganizerPage() {
   useEffect(() => {
     if (current) setCriteria(current.jury_criteria ?? []);
     setCritDirty(false);
+    if (current) setSections(current.presentation_sections ?? []);
+    setSecDirty(false);
   }, [current?.id]);
 
   const handleCreateHackathon = async () => {
@@ -283,6 +288,48 @@ export function OrganizerPage() {
       await api.patch<Hackathon>(`/hackathons/${current.id}`, { jury_criteria: cleaned });
       toast.success("Критерии жюри обновлены");
       setCritDirty(false);
+      reloadHack();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addSection = () => {
+    setSections((ss) => [
+      ...ss,
+      { key: `sec_${Date.now()}`, label: "Новый раздел", keywords: [] },
+    ]);
+    setSecDirty(true);
+  };
+  const updateSection = (idx: number, patch: Partial<PresentationSection>) => {
+    setSections((ss) => ss.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+    setSecDirty(true);
+  };
+  const removeSection = (idx: number) => {
+    setSections((ss) => ss.filter((_, i) => i !== idx));
+    setSecDirty(true);
+  };
+
+  const handleSaveSections = async () => {
+    if (!current) return;
+    const cleaned = sections
+      .map((s) => ({
+        key: s.key || slugify(s.label),
+        label: s.label.trim(),
+        keywords: s.keywords.map((k) => k.trim()).filter(Boolean),
+      }))
+      .filter((s) => s.label && s.keywords.length > 0);
+    if (cleaned.length === 0) {
+      toast.error("Добавьте хотя бы один раздел с ключевыми словами");
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.patch<Hackathon>(`/hackathons/${current.id}`, { presentation_sections: cleaned });
+      toast.success("Структура презентации обновлена");
+      setSecDirty(false);
       reloadHack();
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
@@ -523,6 +570,64 @@ export function OrganizerPage() {
                 <button
                   onClick={handleSaveCriteria}
                   disabled={!critDirty || busy}
+                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-40"
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+              <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-50 pb-4">
+                <Settings size={18} className="text-blue-600" />
+                Структура презентации
+              </h4>
+              <p className="text-[11px] text-gray-400 -mt-1">
+                Разделы, наличие которых проверяется в презентации команд. Каждый раздел
+                ищется по ключевым словам (через запятую) в тексте слайдов.
+              </p>
+              <div className="space-y-3">
+                {sections.map((s, idx) => (
+                  <div key={idx} className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <input
+                        value={s.label}
+                        onChange={(e) => updateSection(idx, { label: e.target.value })}
+                        placeholder="Название раздела"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                      />
+                      <input
+                        value={s.keywords.join(", ")}
+                        onChange={(e) =>
+                          updateSection(idx, { keywords: e.target.value.split(",").map((k) => k.trimStart()) })
+                        }
+                        placeholder="ключевые слова: проблема, problem"
+                        className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeSection(idx)}
+                      title="Удалить раздел"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+                {sections.length === 0 && (
+                  <p className="text-xs text-gray-400">Разделов нет — добавьте первый.</p>
+                )}
+              </div>
+              <button
+                onClick={addSection}
+                className="w-full py-2 text-xs font-semibold text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50"
+              >
+                + Добавить раздел
+              </button>
+              <div className="flex items-center justify-end pt-1">
+                <button
+                  onClick={handleSaveSections}
+                  disabled={!secDirty || busy}
                   className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-40"
                 >
                   Сохранить

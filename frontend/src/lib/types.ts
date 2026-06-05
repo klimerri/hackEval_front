@@ -32,6 +32,7 @@ export interface Hackathon {
   type: string;
   coefficients: Record<string, number>;
   jury_criteria: Criterion[];
+  presentation_sections: PresentationSection[];
   max_team_size: number;
   organizer_id: number;
   teams_count: number;
@@ -42,6 +43,12 @@ export interface Criterion {
   key: string;
   label: string;
   weight: number;
+}
+
+export interface PresentationSection {
+  key: string;
+  label: string;
+  keywords: string[];
 }
 
 export type TeamStatus = 'pending' | 'approved' | 'rejected';
@@ -68,6 +75,7 @@ export interface Team {
   notes: string;
   has_archive: boolean;
   has_doc_file: boolean;
+  has_presentation_file: boolean;
   applied_at: string;
   decided_at: string | null;
   members: TeamMember[];

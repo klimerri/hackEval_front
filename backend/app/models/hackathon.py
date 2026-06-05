@@ -24,6 +24,20 @@ DEFAULT_JURY_CRITERIA: list[dict] = [
 ]
 
 
+# Configurable presentation structure: the organizer can add/remove/rename the
+# sections a pitch deck must cover. Each section is matched by any of its
+# keywords (case-insensitive substring) against the slide text.
+DEFAULT_PRESENTATION_SECTIONS: list[dict] = [
+    {"key": "problem", "label": "Проблема", "keywords": ["проблема", "problem"]},
+    {"key": "solution", "label": "Решение", "keywords": ["решение", "solution"]},
+    {"key": "audience", "label": "Целевая аудитория", "keywords": ["целевая аудитория", "аудитория", "target audience", "audience"]},
+    {"key": "stack", "label": "Технологический стек", "keywords": ["стек", "технологический стек", "tech stack", "технологии", "stack"]},
+    {"key": "demo", "label": "Демо", "keywords": ["демо", "demo"]},
+    {"key": "team", "label": "Команда", "keywords": ["команда", "team"]},
+    {"key": "contacts", "label": "Контакты", "keywords": ["контакты", "contacts"]},
+]
+
+
 class Hackathon(Base):
     __tablename__ = "hackathons"
 
@@ -48,6 +62,7 @@ class Hackathon(Base):
     type: Mapped[str] = mapped_column(String(32), default="Online")
     coefficients: Mapped[dict] = mapped_column(JSONB, default=lambda: {"code": 40, "design": 30, "pitch": 30})
     jury_criteria: Mapped[list] = mapped_column(JSONB, default=lambda: list(DEFAULT_JURY_CRITERIA))
+    presentation_sections: Mapped[list] = mapped_column(JSONB, default=lambda: list(DEFAULT_PRESENTATION_SECTIONS))
     max_team_size: Mapped[int] = mapped_column(default=5)
     organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

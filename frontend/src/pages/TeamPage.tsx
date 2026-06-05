@@ -48,6 +48,7 @@ export function TeamPage() {
   >({});
   const [uploadingArchive, setUploadingArchive] = useState<number | null>(null);
   const [uploadingDocs, setUploadingDocs] = useState<number | null>(null);
+  const [uploadingPres, setUploadingPres] = useState<number | null>(null);
 
   const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set());
 
@@ -234,7 +235,7 @@ export function TeamPage() {
         // when an archive/file is the source, don't overwrite the corresponding URL
         github_url: team?.has_archive ? null : f.github.trim() || null,
         docs_url: team?.has_doc_file ? null : f.docs.trim() || null,
-        presentation_url: f.presentation.trim() || null,
+        presentation_url: team?.has_presentation_file ? null : f.presentation.trim() || null,
         video_url: f.video.trim() || null,
       });
       toast.success("Артефакты сохранены, проверки запущены");
@@ -279,6 +280,34 @@ export function TeamPage() {
     try {
       await api.del<Team>(`/teams/${teamId}/submission/docs`);
       toast.success("Файл документации удалён — теперь можно указать ссылку");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadPresentation = async (teamId: number, file: File) => {
+    setUploadingPres(teamId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.upload<Team>(`/teams/${teamId}/submission/presentation`, fd);
+      toast.success("Презентация загружена, проверка запущена");
+      reloadMy();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Не удалось загрузить презентацию");
+    } finally {
+      setUploadingPres(null);
+    }
+  };
+
+  const handleDeletePresentation = async (teamId: number) => {
+    setBusy(true);
+    try {
+      await api.del<Team>(`/teams/${teamId}/submission/presentation`);
+      toast.success("Файл презентации удалён — теперь можно указать ссылку");
       reloadMy();
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Ошибка");
@@ -792,13 +821,74 @@ export function TeamPage() {
                           </div>
                         </>
                       )}
-                      <ArtifactInput
-                        icon={Presentation}
-                        label="Презентация (PPTX / PDF)"
-                        placeholder="https://..."
-                        value={artForm.presentation}
-                        onChange={(v) => setArtifactField(team.id, "presentation", v)}
-                      />
+                      {/* Презентация: ЛИБО файл, ЛИБО ссылка */}
+                      {team.has_presentation_file ? (
+                        <div className="space-y-2 p-3 bg-green-50 border border-green-100 rounded-lg">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-green-700 min-w-0">
+                              <Presentation size={16} className="flex-shrink-0" />
+                              <span className="truncate">Загружен файл презентации</span>
+                            </span>
+                            <button
+                              onClick={() => handleDeletePresentation(team.id)}
+                              disabled={busy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 flex-shrink-0"
+                            >
+                              <Trash2 size={13} />
+                              Удалить
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-green-700/80">
+                            Презентация проверяется из файла. Чтобы указать ссылку — удалите файл.
+                          </p>
+                          <input
+                            type="file"
+                            accept=".pptx,.pdf,application/pdf"
+                            disabled={uploadingPres === team.id || uploadLocked}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadPresentation(team.id, f);
+                              e.target.value = "";
+                            }}
+                            className="block w-full text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-blue-600 hover:file:bg-blue-50 disabled:opacity-50"
+                          />
+                          <p className="text-[11px] text-green-700/80">
+                            {uploadingPres === team.id ? "Загрузка..." : "…или заменить файл новым."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <ArtifactInput
+                            icon={Presentation}
+                            label="Презентация (PPTX / PDF)"
+                            placeholder="https://..."
+                            value={artForm.presentation}
+                            onChange={(v) => setArtifactField(team.id, "presentation", v)}
+                          />
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                              <Presentation size={14} className="text-gray-400" />
+                              …или загрузите файл (.pptx / .pdf)
+                            </label>
+                            <input
+                              type="file"
+                              accept=".pptx,.pdf,application/pdf"
+                              disabled={uploadingPres === team.id || uploadLocked}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadPresentation(team.id, f);
+                                e.target.value = "";
+                              }}
+                              className="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 disabled:opacity-50"
+                            />
+                            <p className="text-[11px] text-gray-400">
+                              {uploadingPres === team.id
+                                ? "Загрузка и запуск проверки..."
+                                : "Загрузка файла заменит ссылку на презентацию."}
+                            </p>
+                          </div>
+                        </>
+                      )}
                       <ArtifactInput
                         icon={Video}
                         label="Скринкаст (ссылка или файл)"
