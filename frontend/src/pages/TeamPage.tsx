@@ -1,24 +1,24 @@
 import { useState } from "react";
 import {
-  Users,
-  UserPlus,
-  Plus,
-  Search,
-  Edit3,
-  Check,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  UserX,
-  Paperclip,
-  Github,
-  FileText,
-  Presentation,
-  Video,
-  Save,
-  FileArchive,
-} from "lucide-react";
+  IconUsers as Users,
+  IconUserPlus as UserPlus,
+  IconPlus as Plus,
+  IconSearch as Search,
+  IconEdit as Edit3,
+  IconCheck as Check,
+  IconX as X,
+  IconChevronDown as ChevronDown,
+  IconChevronUp as ChevronUp,
+  IconTrash as Trash2,
+  IconUserX as UserX,
+  IconBrandGithub as Github,
+  IconFileText as FileText,
+  IconPresentation as Presentation,
+  IconVideo as Video,
+  IconDeviceFloppy as Save,
+  IconFileZip as FileArchive,
+  IconPaperclip as Paperclip,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useApi } from "../lib/useApi";
 import { api, ApiError } from "../lib/api";

@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Trophy, Mail, User, KeyRound } from "lucide-react";
+import {
+  IconTrophy as Trophy,
+  IconMail as Mail,
+  IconUser as User,
+  IconKey as KeyRound,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";

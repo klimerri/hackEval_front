@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Users, Search, Trash2, UserX, Check, X, ShieldCheck } from "lucide-react";
+import {
+  IconUsers as Users,
+  IconSearch as Search,
+  IconTrash as Trash2,
+  IconUserX as UserX,
+  IconCheck as Check,
+  IconX as X,
+  IconShieldCheck as ShieldCheck,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useApi } from "../lib/useApi";
 import { api, ApiError } from "../lib/api";

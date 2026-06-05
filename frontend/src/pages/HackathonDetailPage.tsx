@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
-  ChevronLeft,
-  CheckCircle2,
-  AlertCircle,
-  Users,
-  Clock,
-  ArrowRight,
-} from "lucide-react";
+  IconChevronLeft as ChevronLeft,
+  IconCircleCheck as CheckCircle2,
+  IconAlertCircle as AlertCircle,
+  IconUsers as Users,
+  IconClock as Clock,
+  IconArrowRight as ArrowRight,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "../lib/utils";
 import { useApi } from "../lib/useApi";

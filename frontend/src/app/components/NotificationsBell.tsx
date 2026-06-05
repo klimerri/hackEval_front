@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import {
+  IconBell as Bell,
+  IconCheck as Check,
+  IconChecks as CheckCheck,
+} from "@tabler/icons-react";
 import { api } from "../../lib/api";
 import type { AppNotification, NotificationList } from "../../lib/types";
 

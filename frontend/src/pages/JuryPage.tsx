@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import {
-  Trophy,
-  Users,
-  Star,
-  Github,
-  FileText,
-  ExternalLink,
-  ChevronRight,
-  ChevronLeft,
-  CheckCircle2,
-  User,
-  MessageSquare,
-  Save,
-  ArrowUpRight,
-  Cpu,
-  Search,
-} from "lucide-react";
+  IconTrophy as Trophy,
+  IconUsers as Users,
+  IconStar as Star,
+  IconBrandGithub as Github,
+  IconFileText as FileText,
+  IconExternalLink as ExternalLink,
+  IconChevronRight as ChevronRight,
+  IconChevronLeft as ChevronLeft,
+  IconCircleCheck as CheckCircle2,
+  IconUser as User,
+  IconMessage as MessageSquare,
+  IconDeviceFloppy as Save,
+  IconArrowUpRight as ArrowUpRight,
+  IconCpu as Cpu,
+  IconSearch as Search,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "../lib/utils";
 import { useApi } from "../lib/useApi";

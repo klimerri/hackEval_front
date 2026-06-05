@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import {
-  LayoutDashboard,
-  Trophy,
-  Users,
-  BarChart3,
-  LogOut,
-  User,
-  Shield,
-  UserCheck,
-  Medal,
-  Menu,
-  X,
-} from "lucide-react";
+  IconLayoutDashboard as LayoutDashboard,
+  IconTrophy as Trophy,
+  IconUsers as Users,
+  IconChartBar as BarChart3,
+  IconLogout as LogOut,
+  IconUser as User,
+  IconShield as Shield,
+  IconUserCheck as UserCheck,
+  IconMedal as Medal,
+  IconMenu2 as Menu,
+  IconX as X,
+} from "@tabler/icons-react";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../lib/auth";
 import { NotificationsBell } from "./NotificationsBell";

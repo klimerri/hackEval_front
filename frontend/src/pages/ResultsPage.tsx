@@ -1,12 +1,12 @@
 import {
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Terminal,
-  Users,
-  Award,
-  RefreshCw,
-} from "lucide-react";
+  IconCircleCheck as CheckCircle2,
+  IconClock as Clock,
+  IconCircleX as XCircle,
+  IconTerminal2 as Terminal,
+  IconUsers as Users,
+  IconAward as Award,
+  IconRefresh as RefreshCw,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApi } from "../lib/useApi";

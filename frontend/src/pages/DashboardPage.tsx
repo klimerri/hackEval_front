@@ -1,4 +1,11 @@
-import { Trophy, ArrowRight, Users, Star, ShieldCheck, BarChart3 } from "lucide-react";
+import {
+  IconTrophy as Trophy,
+  IconArrowRight as ArrowRight,
+  IconUsers as Users,
+  IconStar as Star,
+  IconShieldCheck as ShieldCheck,
+  IconChartBar as BarChart3,
+} from "@tabler/icons-react";
 import { Link, useNavigate } from "react-router";
 import { useApi } from "../lib/useApi";
 import type { Dashboard, Role } from "../lib/types";

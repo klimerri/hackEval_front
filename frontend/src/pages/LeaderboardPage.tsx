@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Trophy, Medal } from "lucide-react";
+import {
+  IconTrophy as Trophy,
+  IconMedal as Medal,
+} from "@tabler/icons-react";
 import { useApi } from "../lib/useApi";
 import type { Hackathon, TeamResult } from "../lib/types";
 

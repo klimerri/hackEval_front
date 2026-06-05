@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Calendar, Users, Search, Filter } from "lucide-react";
+import {
+  IconCalendar as Calendar,
+  IconUsers as Users,
+  IconSearch as Search,
+  IconFilter as Filter,
+} from "@tabler/icons-react";
 import { useApi } from "../lib/useApi";
 import type { Hackathon } from "../lib/types";
 
