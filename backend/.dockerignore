@@ -1,0 +1,11 @@
+# Node deps are installed inside the image (see Dockerfile); never copy the
+# host-installed (possibly Windows) node_modules into the Linux image.
+**/node_modules
+
+# Python caches / local artifacts
+**/__pycache__
+*.pyc
+.venv
+uploads
+pl.json
+pl.err

@@ -8,7 +8,7 @@ against a fixed checklist:
 - run instructions (in README)
 - LOC (lines of code, excluding blanks/comments)
 - average cyclomatic complexity (radon if available, else 1.0)
-- linter issues (pylint over Python sources, if available)
+- linter issues (pylint over Python sources + ESLint over JS/TS, if available)
 - secret patterns (regex-based, lightweight)
 
 `source` may be:
@@ -36,6 +36,9 @@ import httpx
 logger = logging.getLogger(__name__)
 
 MAX_LINT_FILES = 60
+
+# JS/TS sources linted via ESLint (see _run_eslint).
+JS_TS_EXTS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")
 
 DEP_FILES = {
     "requirements.txt",
@@ -239,6 +242,74 @@ def _run_pylint(py_files: list[tuple[str, bytes]]) -> int | None:
         return None
 
 
+def _run_eslint(js_files: list[tuple[str, bytes]]) -> int | None:
+    """Run ESLint over the JS/TS sources. Returns issue count, or None if the
+    ESLint toolchain is unavailable.
+
+    Uses the self-contained flat config under ESLINT_DIR (default /app/lint),
+    which ships its own node_modules so it does not depend on the submission's
+    dependencies. The sources are statically analysed, never executed.
+    """
+    if not js_files:
+        return None
+    tool = os.environ.get("ESLINT_DIR", "/app/lint")
+    entry = Path(tool) / "node_modules" / "eslint" / "bin" / "eslint.js"
+    config = Path(tool) / "eslint.config.mjs"
+    node = os.environ.get("NODE_BIN", "node")
+    if not entry.exists() or not config.exists():
+        return None
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            # Relative names + cwd=tmp so ESLint treats the files as inside its
+            # base path (otherwise it emits a spurious "file ignored" warning).
+            names: list[str] = []
+            for name, data in js_files[:MAX_LINT_FILES]:
+                safe = name.replace("\\", "/").split("/")[-1]
+                if not safe.endswith(JS_TS_EXTS):
+                    continue
+                rel = f"{len(names)}_{safe}"
+                try:
+                    (Path(tmp) / rel).write_bytes(data)
+                    names.append(rel)
+                except Exception:
+                    continue
+            if not names:
+                return None
+            proc = subprocess.run(
+                [
+                    node,
+                    str(entry),
+                    "--no-config-lookup",
+                    "--config",
+                    str(config),
+                    "--format",
+                    "json",
+                    *names,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=tmp,
+            )
+            out = proc.stdout.strip()
+            if out.startswith("["):
+                report = json.loads(out)
+                return sum(r.get("errorCount", 0) + r.get("warningCount", 0) for r in report)
+            # non-JSON stdout: distinguish a broken/missing toolchain from 0 issues
+            if "Cannot find module" in (proc.stderr or ""):
+                return None
+            return 0
+    except FileNotFoundError:
+        # node binary not installed
+        return None
+    except subprocess.TimeoutExpired:
+        logger.warning("eslint timed out")
+        return None
+    except Exception as exc:
+        logger.warning("eslint failed: %s", exc)
+        return None
+
+
 def run_code_check(source: str | None) -> dict:
     """Synchronous code check. Returns a dict ready to be written into CodeCheck.
 
@@ -298,9 +369,14 @@ def run_code_check(source: str | None) -> dict:
     loc, avg_cc = _count_loc_and_complexity(files)
     secrets = _scan_secrets("\n".join(all_text_chunks))
     py_files = [(n, d) for n, d in files if n.endswith(".py")]
-    lint_raw = _run_pylint(py_files)
-    lint_available = lint_raw is not None
-    lint_issues = lint_raw if lint_available else 0
+    js_files = [(n, d) for n, d in files if n.endswith(JS_TS_EXTS)]
+    # Lint each language with its own tool; None means that linter is unavailable
+    # (or no files of that language). Issues are summed across languages.
+    py_lint = _run_pylint(py_files) if py_files else None
+    js_lint = _run_eslint(js_files)
+    lint_parts = [x for x in (py_lint, js_lint) if x is not None]
+    lint_available = len(lint_parts) > 0
+    lint_issues = sum(lint_parts) if lint_parts else 0
 
     score = 0.0
     score += 1.5 if has_readme else 0
@@ -325,12 +401,16 @@ def run_code_check(source: str | None) -> dict:
     score = max(0.0, min(10.0, score))
 
     msg_parts = ["ok"]
-    if not lint_available:
-        msg_parts.append("pylint n/a")
-    else:
-        msg_parts.append(f"pylint: {lint_issues} issues")
+    lint_bits: list[str] = []
+    if py_lint is not None:
+        lint_bits.append(f"pylint {py_lint}")
+    if js_lint is not None:
+        lint_bits.append(f"eslint {js_lint}")
+    msg_parts.append(" + ".join(lint_bits) + " issues" if lint_bits else "lint n/a")
     if py_files:
-        msg_parts.append(f"{len(py_files)} py files")
+        msg_parts.append(f"{len(py_files)} py")
+    if js_files:
+        msg_parts.append(f"{len(js_files)} js/ts")
 
     return {
         "status": "done",

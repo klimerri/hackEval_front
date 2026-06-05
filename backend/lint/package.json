@@ -1,0 +1,12 @@
+{
+  "name": "hackauth-lint-tool",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained ESLint toolchain used by the code-check service to lint submitted JS/TS sources.",
+  "dependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "typescript-eslint": "^8.18.0"
+  }
+}
