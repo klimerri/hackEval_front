@@ -73,6 +73,7 @@ class CodeCheck(_CheckBase, Base):
     avg_complexity: Mapped[float] = mapped_column(default=0.0)
     lint_issues: Mapped[int] = mapped_column(default=0)
     secrets_found: Mapped[int] = mapped_column(default=0)
+    nn_quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 class DocCheck(_CheckBase, Base):
     __tablename__ = "doc_checks"

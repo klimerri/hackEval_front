@@ -126,10 +126,64 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
   html {
     font-size: var(--font-size);
+  }
+
+  .font-display {
+    font-family: "Unbounded", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1 {
+    font-family: "Unbounded", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  /* Light, distinctive app canvas: white base + faint dot-grid + soft glow. */
+  .app-canvas {
+    background-color: #fbfbfd;
+    background-image:
+      radial-gradient(60% 55% at 100% 0%, rgba(59, 130, 246, 0.06), transparent 70%),
+      radial-gradient(50% 45% at 0% 0%, rgba(99, 102, 241, 0.05), transparent 70%),
+      radial-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 22px 22px;
+    background-attachment: fixed, fixed, fixed;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .page-enter {
+    animation: page-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  *:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+  }
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   h1 {

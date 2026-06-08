@@ -17,6 +17,21 @@ import { cn } from "../../lib/utils";
 import { useAuth } from "../../lib/auth";
 import { NotificationsBell } from "./NotificationsBell";
 
+type NavItem = { name: string; path: string; icon: typeof LayoutDashboard };
+
+function BrandMark() {
+  return (
+    <div className="relative h-10 w-10 shrink-0">
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-[0_6px_20px_-6px_rgba(59,130,246,0.7)]" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-[3px]">
+        <span className="block h-[3px] w-3.5 rounded-full bg-white/95" />
+        <span className="block h-[3px] w-4 rounded-full bg-white/80" />
+        <span className="block h-[3px] w-[18px] rounded-full bg-white/60" />
+      </div>
+    </div>
+  );
+}
+
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,10 +43,13 @@ export function Layout() {
     navigate("/login");
   };
 
-  const navItems = [
+  const mainNav: NavItem[] = [
     { name: "Дашборд", path: "/", icon: LayoutDashboard },
     { name: "Хакатоны", path: "/hackathons", icon: Trophy },
     { name: "Рейтинг", path: "/leaderboard", icon: Medal },
+  ];
+
+  const roleNav: NavItem[] = [
     ...(user?.role === "participant"
       ? [
           { name: "Команды", path: "/teams", icon: Users },
@@ -49,105 +67,166 @@ export function Layout() {
       : []),
   ];
 
-  return (
-    <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden">
+  const roleLabel =
+    user?.role === "organizer" ? "Организатор" : user?.role === "jury" ? "Жюри" : "Участник";
 
+  const isActive = (path: string) =>
+    location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
+
+  const renderItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = isActive(item.path);
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={cn(
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+          active
+            ? "bg-white/[0.07] text-white"
+            : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-500 transition-all duration-300",
+            active
+              ? "opacity-100 shadow-[0_0_12px_rgba(59,130,246,0.8)]"
+              : "opacity-0 -translate-x-1",
+          )}
+        />
+        <Icon
+          size={19}
+          stroke={1.75}
+          className={cn(
+            "shrink-0 transition-colors",
+            active ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300",
+          )}
+        />
+        <span className={cn("font-medium tracking-tight", active && "font-semibold")}>
+          {item.name}
+        </span>
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
         className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-[270px] flex-col bg-[#0e0f15] text-slate-200 transition-transform duration-300 lg:static lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-blue-600 font-bold text-xl">
-            <span>Базис</span>
+        {/* atmospheric glow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(120%_80%_at_30%_0%,rgba(59,130,246,0.18),transparent_70%)]" />
+
+        <div className="relative flex items-center justify-between px-5 py-6">
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <div className="leading-none">
+              <div className="font-display text-lg font-bold tracking-tight text-white">
+                Базис
+              </div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.22em] text-slate-500">
+                Оценка решений
+              </div>
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 text-gray-400 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
           >
             <X size={20} />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== "/" && location.pathname.startsWith(item.path));
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:bg-gray-100",
-                )}
-              >
-                <Icon size={18} />
-                {item.name}
-              </Link>
-            );
-          })}
+        <nav className="sidebar-scroll relative flex-1 space-y-7 overflow-y-auto px-3 pb-4">
+          <div className="space-y-1">
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+              Навигация
+            </p>
+            {mainNav.map(renderItem)}
+          </div>
+
+          {roleNav.length > 0 && (
+            <div className="space-y-1">
+              <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+                {roleLabel}
+              </p>
+              {roleNav.map(renderItem)}
+            </div>
+          )}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 w-full text-left text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
-          >
-            <LogOut size={18} />
-            Выйти
-          </button>
+        <div className="relative m-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/90 to-indigo-600 text-sm font-bold text-white ring-2 ring-blue-500/20">
+              {user?.name?.[0] ?? <User size={16} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">
+                {user?.name ?? "Пользователь"}
+              </p>
+              <p className="truncate text-xs text-slate-500">{user?.email ?? "—"}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Выйти"
+              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+            >
+              <LogOut size={18} stroke={1.75} />
+            </button>
+          </div>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-500 hover:text-gray-700"
+              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 lg:hidden"
             >
               <Menu size={20} />
             </button>
-            <div className="hidden sm:flex items-center gap-2 text-gray-900 font-bold">
-              <span>Базис</span>
+            <div className="flex items-center gap-2 lg:hidden">
+              <span className="font-display text-base font-bold tracking-tight text-slate-900">
+                Базис
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-6">
+          <div className="flex items-center gap-3 lg:gap-5">
             <NotificationsBell />
-            <div className="flex items-center gap-2 lg:gap-3 pl-3 lg:pl-6 border-l border-gray-200">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900 truncate max-w-[120px] lg:max-w-none">
+            <div className="hidden items-center gap-2.5 border-l border-slate-200 pl-4 sm:flex">
+              <div className="text-right">
+                <p className="max-w-[140px] truncate text-sm font-semibold text-slate-900">
                   {user?.name ?? "Пользователь"}
                 </p>
-                <p className="text-xs text-gray-500 truncate max-w-[120px] lg:max-w-none">
-                  {user?.email ?? "—"}
+                <p className="text-xs font-medium uppercase tracking-wider text-blue-600">
+                  {roleLabel}
                 </p>
               </div>
-              <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold shrink-0">
-                {user?.name?.[0] ?? <User size={20} />}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                {user?.name?.[0] ?? <User size={18} />}
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-          <Outlet />
+        <main className="app-canvas flex-1 overflow-y-auto p-4 lg:p-8">
+          <div key={location.pathname} className="page-enter mx-auto max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

@@ -84,6 +84,14 @@ export interface Team {
 
 export type CheckStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
 
+export interface CodeCheckRaw {
+  nn_readme: number | null;
+  nn_license: number | null;
+  nn_deps: number | null;
+  nn_run: number | null;
+  nn_code_quality: number | null;
+}
+
 export interface CodeCheck {
   status: CheckStatus;
   score: number;
@@ -95,6 +103,8 @@ export interface CodeCheck {
   avg_complexity: number;
   lint_issues: number;
   secrets_found: number;
+  nn_quality_score: number | null;
+  raw: CodeCheckRaw;
   message: string;
 }
 

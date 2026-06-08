@@ -59,11 +59,20 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="p-8 bg-blue-600 text-white text-center">
-          <h1 className="text-2xl font-bold">Базис</h1>
-          <p className="text-blue-100 mt-2">Система автоматической проверки решений</p>
+    <div className="app-canvas flex min-h-screen items-center justify-center p-4">
+      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-300/30">
+        <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500" />
+        <div className="px-8 pb-6 pt-8 text-center">
+          <div className="relative mx-auto mb-4 h-12 w-12">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-[0_8px_24px_-6px_rgba(59,130,246,0.7)]" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+              <span className="block h-[3px] w-4 rounded-full bg-white/95" />
+              <span className="block h-[3px] w-5 rounded-full bg-white/80" />
+              <span className="block h-[3px] w-[22px] rounded-full bg-white/60" />
+            </div>
+          </div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">Базис</h1>
+          <p className="mt-2 text-sm text-slate-500">Система автоматической проверки решений</p>
         </div>
 
         <div className="flex border-b border-gray-100">
@@ -150,7 +159,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all transform active:scale-[0.98] disabled:opacity-50"
+            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] disabled:opacity-50"
           >
             {submitting ? "Подождите..." : mode === "login" ? "Войти в систему" : "Создать аккаунт"}
           </button>

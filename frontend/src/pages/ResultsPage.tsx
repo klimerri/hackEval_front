@@ -6,12 +6,19 @@ import {
   IconUsers as Users,
   IconAward as Award,
   IconRefresh as RefreshCw,
+  IconChevronDown as ChevronDown,
+  IconFileText as FileText,
+  IconShield as Shield,
+  IconPackage as Package,
+  IconBook as Book,
+  IconCode as Code,
+  IconBrain as Brain,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApi } from "../lib/useApi";
 import { api, ApiError } from "../lib/api";
-import type { Hackathon, Submission, Team } from "../lib/types";
+import type { CodeCheck, Hackathon, Submission, Team } from "../lib/types";
 
 function statusBadge(s: Submission["status"]) {
   if (s === "evaluated")
@@ -19,6 +26,119 @@ function statusBadge(s: Submission["status"]) {
   if (s === "error")
     return { className: "bg-red-100 text-red-700", label: "Ошибка", Icon: XCircle };
   return { className: "bg-yellow-100 text-yellow-700", label: "На проверке", Icon: Clock };
+}
+
+function NNBar({ label, value, Icon }: { label: string; value: number | null; Icon: React.ElementType }) {
+  if (value == null) return null;
+  const pct = Math.round(value * 100);
+  const color = pct >= 75 ? "bg-green-500" : pct >= 45 ? "bg-amber-400" : "bg-red-400";
+  const textColor = pct >= 75 ? "text-green-700" : pct >= 45 ? "text-amber-700" : "text-red-600";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-gray-600">
+          <Icon size={13} className="text-gray-400" />
+          {label}
+        </div>
+        <span className={`text-xs font-bold tabular-nums ${textColor}`}>{pct}%</span>
+      </div>
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function CodeCheckBreakdown({ check }: { check: CodeCheck }) {
+  const [open, setOpen] = useState(false);
+  const ok = check.status === "done";
+  const raw = check.raw ?? {};
+  const hasNN = raw.nn_readme != null;
+
+  return (
+    <div className="border border-gray-100 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          {ok ? <CheckCircle2 size={18} className="text-green-500 flex-shrink-0" /> : <Clock size={18} className="text-yellow-500 flex-shrink-0" />}
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Код репозитория</p>
+            <p className="text-xs text-gray-400">
+              LOC: {check.loc} · линтер: {check.lint_issues} · секретов: {check.secrets_found}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-bold ${ok ? "text-green-600" : "text-yellow-600"}`}>
+            {check.score.toFixed(1)} / 10
+          </span>
+          <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-5 border-t border-gray-100 bg-white">
+          {hasNN ? (
+            <>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+                <Brain size={13} />
+                Оценка выставлена нейросетью по всем критериям
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Структура проекта</p>
+                <NNBar label="README" value={raw.nn_readme} Icon={FileText} />
+                <NNBar label="LICENSE" value={raw.nn_license} Icon={Shield} />
+                <NNBar label="Файл зависимостей" value={raw.nn_deps} Icon={Package} />
+                <NNBar label="Инструкция запуска" value={raw.nn_run} Icon={Book} />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Качество кода</p>
+                <NNBar label="Качество кода" value={raw.nn_code_quality} Icon={Code} />
+              </div>
+
+              <div className="pt-1 border-t border-gray-100 space-y-1.5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Дополнительно (статический анализ)</p>
+                <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
+                  <div className="bg-gray-50 rounded-lg px-2.5 py-2 text-center">
+                    <p className="font-mono font-bold text-gray-800">{check.loc}</p>
+                    <p>строк кода</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg px-2.5 py-2 text-center">
+                    <p className="font-mono font-bold text-gray-800">{check.lint_issues}</p>
+                    <p>проблем линтера</p>
+                  </div>
+                  <div className={`rounded-lg px-2.5 py-2 text-center ${check.secrets_found > 0 ? "bg-red-50" : "bg-gray-50"}`}>
+                    <p className={`font-mono font-bold ${check.secrets_found > 0 ? "text-red-600" : "text-gray-800"}`}>{check.secrets_found}</p>
+                    <p>секретов</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-400">Нейросеть недоступна — показан статический анализ.</p>
+              {[
+                { label: "README", ok: check.has_readme, Icon: FileText },
+                { label: "LICENSE", ok: check.has_license, Icon: Shield },
+                { label: "Зависимости", ok: check.has_deps_file, Icon: Package },
+                { label: "Инструкция", ok: check.has_run_instructions, Icon: Book },
+              ].map(({ label, ok: v, Icon }) => (
+                <div key={label} className="flex items-center gap-2 text-sm text-gray-700">
+                  {v ? <CheckCircle2 size={15} className="text-green-500" /> : <XCircle size={15} className="text-red-400" />}
+                  <Icon size={13} className="text-gray-400" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ResultsPage() {
@@ -47,7 +167,7 @@ export function ResultsPage() {
             break;
           }
         } catch {
-
+          // ignore polling errors
         }
       }
       reload();
@@ -149,18 +269,18 @@ export function ResultsPage() {
                         </span>
                       </div>
 
-                      <div className="space-y-3">
-                        <CheckRow
-                          ok={s.code_check?.status === "done"}
-                          name="Код (README, LICENSE, deps, LOC, секреты)"
-                          score={s.code_check?.score}
-                          extra={
-                            s.code_check
-                              ? `LOC: ${s.code_check.loc}, линтер: ${s.code_check.lint_issues}, секретов: ${s.code_check.secrets_found}`
-                              : ""
-                          }
-                        />
-                        <CheckRow
+                      <div className="space-y-2">
+                        {s.code_check ? (
+                          <CodeCheckBreakdown check={s.code_check} />
+                        ) : (
+                          <SimpleCheckRow
+                            ok={false}
+                            name="Код репозитория"
+                            score={undefined}
+                            extra="нет данных"
+                          />
+                        )}
+                        <SimpleCheckRow
                           ok={s.doc_check?.status === "done"}
                           name={`Документация (${s.doc_check?.fmt ?? "—"})`}
                           score={s.doc_check?.score}
@@ -170,7 +290,7 @@ export function ResultsPage() {
                               : ""
                           }
                         />
-                        <CheckRow
+                        <SimpleCheckRow
                           ok={s.presentation_check?.status === "done"}
                           name={`Презентация (${s.presentation_check?.fmt ?? "—"})`}
                           score={s.presentation_check?.score}
@@ -180,7 +300,7 @@ export function ResultsPage() {
                               : ""
                           }
                         />
-                        <CheckRow
+                        <SimpleCheckRow
                           ok={s.video_check?.status === "done"}
                           name="Видео (ffprobe)"
                           score={s.video_check?.score}
@@ -238,7 +358,7 @@ export function ResultsPage() {
   );
 }
 
-function CheckRow({
+function SimpleCheckRow({
   ok,
   name,
   score,

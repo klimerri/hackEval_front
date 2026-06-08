@@ -375,39 +375,47 @@ export function TeamPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Командный центр</h1>
-          <p className="text-gray-500">Создавайте свои команды или присоединяйтесь к единомышленникам.</p>
-        </div>
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm md:p-8">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">
+              Командный центр
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Ваши команды</h1>
+            <p className="max-w-md text-slate-500">
+              Создавайте команды или присоединяйтесь к единомышленникам.
+            </p>
+          </div>
 
-        <button
-          onClick={() => setCreating(true)}
-          className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
-        >
-          <Plus size={20} />
-          Создать команду
-        </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 md:w-auto"
+          >
+            <Plus size={20} />
+            Создать команду
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:flex sm:w-fit gap-1 p-1 bg-gray-100 rounded-xl">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200/70 bg-white p-1 shadow-sm sm:flex sm:w-fit">
         <button
           onClick={() => setActiveTab("my")}
-          className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`rounded-xl px-6 py-2 text-sm font-semibold transition-all ${
             activeTab === "my"
-              ? "bg-white text-blue-600 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "text-slate-500 hover:bg-slate-100"
           }`}
         >
           Мои команды
         </button>
         <button
           onClick={() => setActiveTab("explore")}
-          className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`rounded-xl px-6 py-2 text-sm font-semibold transition-all ${
             activeTab === "explore"
-              ? "bg-white text-blue-600 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "text-slate-500 hover:bg-slate-100"
           }`}
         >
           Поиск команд

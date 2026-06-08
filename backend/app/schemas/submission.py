@@ -18,6 +18,8 @@ class CodeCheckOut(BaseModel):
     avg_complexity: float = 0.0
     lint_issues: int = 0
     secrets_found: int = 0
+    nn_quality_score: float | None = None
+    raw: dict = Field(default_factory=dict)
     message: str = ""
 
     @field_validator("status", mode="before")

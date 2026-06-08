@@ -355,28 +355,44 @@ def run_code_check(source: str | None) -> dict:
     lint_available = len(lint_parts) > 0
     lint_issues = sum(lint_parts) if lint_parts else 0
 
-    score = 0.0
-    score += 1.5 if has_readme else 0
-    score += 1.0 if has_license else 0
-    score += 1.5 if has_deps else 0
-    score += 1.0 if has_run else 0
-    if loc > 0:
-        score += min(1.5, loc / 700)
-    if avg_cc > 0:
-        score += min(1.5, max(0.0, 1.5 - max(0.0, (avg_cc - 5)) * 0.3))
-    if secrets == 0:
-        score += 1.0
-    else:
-        score -= min(2.0, secrets * 0.5)
-    if not lint_available:
-        score += 0.5
-    elif lint_issues == 0:
-        score += 1.0
-    else:
-        score += max(0.0, 1.0 - min(1.0, lint_issues / 50.0))
-    score = max(0.0, min(10.0, score))
+    from app.services import nn_scorer
 
-    msg_parts = ["ok"]
+    nn_scores = nn_scorer.score_files(files)
+
+    if nn_scores is not None:
+        # NN is the primary evaluator — it outputs individual scores for each
+        # criterion and a composite 0..10. Use NN scores to populate all fields.
+        score      = nn_scores["composite"]
+        nn_readme  = nn_scores.get("readme", 0.0)
+        nn_license = nn_scores.get("license", 0.0)
+        nn_deps    = nn_scores.get("deps", 0.0)
+        nn_run     = nn_scores.get("run_instructions", 0.0)
+        nn_code_q  = nn_scores.get("code_quality", 0.0)
+    else:
+        # Fallback rule-based score when the model is unavailable.
+        nn_readme = nn_license = nn_deps = nn_run = nn_code_q = None
+        score = 0.0
+        score += 1.5 if has_readme else 0
+        score += 1.0 if has_license else 0
+        score += 1.5 if has_deps else 0
+        score += 1.0 if has_run else 0
+        if loc > 0:
+            score += min(1.5, loc / 700)
+        if avg_cc > 0:
+            score += min(1.5, max(0.0, 1.5 - max(0.0, (avg_cc - 5)) * 0.3))
+        if secrets == 0:
+            score += 1.0
+        else:
+            score -= min(2.0, secrets * 0.5)
+        if not lint_available:
+            score += 0.5
+        elif lint_issues == 0:
+            score += 1.0
+        else:
+            score += max(0.0, 1.0 - min(1.0, lint_issues / 50.0))
+        score = max(0.0, min(10.0, round(score, 2)))
+
+    msg_parts = ["ok" if nn_scores else "fallback"]
     lint_bits: list[str] = []
     if py_lint is not None:
         lint_bits.append(f"pylint {py_lint}")
@@ -399,5 +415,13 @@ def run_code_check(source: str | None) -> dict:
         "avg_complexity": avg_cc,
         "lint_issues": lint_issues,
         "secrets_found": secrets,
+        "nn_quality_score": nn_code_q,
+        "raw": {
+            "nn_readme": nn_readme,
+            "nn_license": nn_license,
+            "nn_deps": nn_deps,
+            "nn_run": nn_run,
+            "nn_code_quality": nn_code_q,
+        },
         "message": " · ".join(msg_parts),
     }

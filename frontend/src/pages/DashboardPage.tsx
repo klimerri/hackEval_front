@@ -70,31 +70,44 @@ export function DashboardPage() {
   const role = data.role;
   const actions = QUICK_ACTIONS[role] ?? QUICK_ACTIONS.participant;
   const cfg = CFG[role] ?? CFG.participant;
+  const roleRu = role === "organizer" ? "Организатор" : role === "jury" ? "Жюри" : "Участник";
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-gray-900">Рады видеть вас, {user?.name ?? "!"}!</h1>
-        <p className="text-gray-500">Быстрый доступ к ключевым разделам платформы.</p>
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-8 shadow-sm">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 right-1/3 h-40 w-40 rounded-full bg-indigo-500/5 blur-3xl" />
+        <p className="relative text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">
+          Панель · {roleRu}
+        </p>
+        <h1 className="relative mt-3 text-3xl font-bold text-slate-900">
+          Рады видеть вас, {user?.name ?? "!"}
+        </h1>
+        <p className="relative mt-2 max-w-xl text-slate-500">
+          Быстрый доступ к ключевым разделам платформы оценки решений.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {actions.map((a) => {
           const Icon = a.icon;
           return (
             <Link
               key={a.to}
               to={a.to}
-              className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10"
             >
-              <div className={`${a.bg} ${a.color} p-3 rounded-xl`}>
+              <div className={`${a.bg} ${a.color} grid h-12 w-12 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110`}>
                 <Icon size={24} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-gray-900">{a.label}</p>
-                <p className="text-sm text-gray-500 truncate">{a.hint}</p>
+                <p className="font-bold tracking-tight text-slate-900">{a.label}</p>
+                <p className="truncate text-sm text-slate-500">{a.hint}</p>
               </div>
-              <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+              <ArrowRight
+                size={18}
+                className="-translate-x-1 text-slate-300 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-blue-500 group-hover:opacity-100"
+              />
             </Link>
           );
         })}

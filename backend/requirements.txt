@@ -23,3 +23,10 @@ detect-secrets==1.5.0
 ffmpeg-python==0.2.0
 pytest==8.3.3
 pytest-asyncio==0.24.0
+
+# Neural network code quality scorer
+transformers==4.46.3
+# Required by the bundled RoBERTa tokenizer (tokenizer_class=RobertaTokenizer is a
+# slow tokenizer backed by SentencePiece). Without this, nn_scorer silently
+# falls back to the rule-based score and the model is never used.
+sentencepiece==0.2.0

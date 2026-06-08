@@ -4,7 +4,6 @@ import {
   IconSettings as Settings,
   IconUsers as Users,
   IconUserCheck as UserCheck,
-  IconChartBar as BarChart,
   IconTrophy as Trophy,
   IconTrendingUp as TrendingUp,
   IconCirclePlus as PlusCircle,
@@ -42,6 +41,7 @@ import type {
 } from "../lib/types";
 
 type Tab = "events" | "members" | "analytics";
+type DetailTab = "overview" | "teams" | "jury" | "settings";
 
 export function OrganizerPage() {
   const [activeTab, setActiveTab] = useState<Tab>("events");
@@ -60,6 +60,7 @@ export function OrganizerPage() {
   const [critDirty, setCritDirty] = useState(false);
   const [sections, setSections] = useState<PresentationSection[]>([]);
   const [secDirty, setSecDirty] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
 
   const [newHack, setNewHack] = useState({
     title: "",
@@ -96,6 +97,7 @@ export function OrganizerPage() {
     setCritDirty(false);
     if (current) setSections(current.presentation_sections ?? []);
     setSecDirty(false);
+    setDetailTab("overview");
   }, [current?.id]);
 
   const handleCreateHackathon = async () => {
@@ -336,37 +338,170 @@ export function OrganizerPage() {
     }
   };
 
+  const criteriaCard = (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm space-y-4">
+      <h4 className="flex items-center gap-2 border-b border-slate-100 pb-4 font-bold text-slate-900">
+        <Settings size={18} className="text-blue-600" />
+        Критерии оценки жюри
+      </h4>
+      <p className="-mt-1 text-[11px] text-slate-400">
+        Авто-проверки фиксированы (40% итога). Жюри оценивает по этим критериям (60%); веса —
+        относительные.
+      </p>
+      <div className="space-y-3">
+        {criteria.map((c, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <input
+              value={c.label}
+              onChange={(e) => updateCriterion(idx, { label: e.target.value })}
+              placeholder="Название критерия"
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={c.weight}
+                onChange={(e) => updateCriterion(idx, { weight: Number(e.target.value) })}
+                className="w-16 rounded-lg border border-slate-200 px-2 py-2 text-center text-sm outline-none focus:border-blue-500"
+              />
+              <span className="text-xs text-slate-400">%</span>
+            </div>
+            <button
+              onClick={() => removeCriterion(idx)}
+              title="Удалить критерий"
+              className="flex-shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+        {criteria.length === 0 && (
+          <p className="text-xs text-slate-400">Критериев нет — добавьте первый.</p>
+        )}
+      </div>
+      <button
+        onClick={addCriterion}
+        className="w-full rounded-lg border border-dashed border-blue-200 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+      >
+        + Добавить критерий
+      </button>
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[10px] italic text-slate-400">
+          Сумма весов: {criteria.reduce((a, c) => a + (c.weight || 0), 0)}%
+        </p>
+        <button
+          onClick={handleSaveCriteria}
+          disabled={!critDirty || busy}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white disabled:opacity-40"
+        >
+          Сохранить
+        </button>
+      </div>
+    </div>
+  );
+
+  const sectionsCard = (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm space-y-4">
+      <h4 className="flex items-center gap-2 border-b border-slate-100 pb-4 font-bold text-slate-900">
+        <Settings size={18} className="text-blue-600" />
+        Структура презентации
+      </h4>
+      <p className="-mt-1 text-[11px] text-slate-400">
+        Разделы, наличие которых проверяется в презентации команд. Каждый раздел ищется по
+        ключевым словам (через запятую) в тексте слайдов.
+      </p>
+      <div className="space-y-3">
+        {sections.map((s, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <input
+                value={s.label}
+                onChange={(e) => updateSection(idx, { label: e.target.value })}
+                placeholder="Название раздела"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              />
+              <input
+                value={s.keywords.join(", ")}
+                onChange={(e) =>
+                  updateSection(idx, { keywords: e.target.value.split(",").map((k) => k.trimStart()) })
+                }
+                placeholder="ключевые слова: проблема, problem"
+                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 outline-none focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => removeSection(idx)}
+              title="Удалить раздел"
+              className="flex-shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+        {sections.length === 0 && (
+          <p className="text-xs text-slate-400">Разделов нет — добавьте первый.</p>
+        )}
+      </div>
+      <button
+        onClick={addSection}
+        className="w-full rounded-lg border border-dashed border-blue-200 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+      >
+        + Добавить раздел
+      </button>
+      <div className="flex items-center justify-end pt-1">
+        <button
+          onClick={handleSaveSections}
+          disabled={!secDirty || busy}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white disabled:opacity-40"
+        >
+          Сохранить
+        </button>
+      </div>
+    </div>
+  );
+
   if (selectedHackathon && current) {
     const teams = teamsForHack ?? [];
     const pending = teams.filter((t) => t.status === "pending");
     const approved = teams.filter((t) => t.status === "approved");
+    const juryList = assignedJury ?? [];
+
+    const tabs: { id: DetailTab; label: string; count?: number }[] = [
+      { id: "overview", label: "Обзор", count: pending.length || undefined },
+      { id: "teams", label: "Команды", count: teams.length || undefined },
+      { id: "jury", label: "Жюри", count: juryList.length || undefined },
+      { id: "settings", label: "Настройки" },
+    ];
 
     return (
-      <div className="space-y-8 animate-in slide-in-from-right-4 duration-500 pb-20">
+      <div className="space-y-6 pb-20">
         <button
           onClick={() => setSelectedHackathon(null)}
-          className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
           Назад к списку хакатонов
         </button>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900">{current.title}</h1>
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm md:p-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="relative space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{current.title}</h1>
               <span
                 className={cn(
-                  "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                  "rounded-full px-3 py-1 text-[10px] font-bold uppercase",
                   current.status === "active"
                     ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-500",
+                    : "bg-slate-100 text-slate-500",
                 )}
               >
                 {current.status === "active" ? "Запущен" : current.status}
               </span>
             </div>
-            <p className="text-gray-500 flex items-center gap-2">
+            <p className="flex items-center gap-2 text-sm text-slate-500">
               <Calendar size={16} />
               {new Date(current.start_date).toLocaleDateString("ru-RU")} –{" "}
               {new Date(current.end_date).toLocaleDateString("ru-RU")}
@@ -374,24 +509,58 @@ export function OrganizerPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {pending.length > 0 && (
-              <div className="bg-yellow-50/50 rounded-2xl border border-yellow-100 overflow-hidden">
-                <div className="p-6 border-b border-yellow-100 flex items-center justify-between">
+        <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200/70 bg-white p-1 shadow-sm">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setDetailTab(t.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all",
+                detailTab === t.id
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-100",
+              )}
+            >
+              {t.label}
+              {t.count != null && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    detailTab === t.id ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600",
+                  )}
+                >
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {detailTab === "overview" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="Всего команд" value={teams.length} />
+              <StatCard label="На одобрении" value={pending.length} tone="amber" />
+              <StatCard label="Проект сдан" value={approved.filter((t) => t.github_url).length} tone="green" />
+              <StatCard label="Жюри" value={juryList.length} tone="blue" />
+            </div>
+
+            {pending.length > 0 ? (
+              <div className="overflow-hidden rounded-2xl border border-amber-100 bg-amber-50/40">
+                <div className="flex items-center justify-between border-b border-amber-100 p-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                       <Clock size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900">Новые заявки на участие</h3>
-                      <p className="text-xs text-yellow-700 font-medium">
+                      <h3 className="font-bold text-slate-900">Новые заявки на участие</h3>
+                      <p className="text-xs font-medium text-amber-700">
                         Требуется ваше одобрение ({pending.length})
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="divide-y divide-yellow-100">
+                <div className="divide-y divide-amber-100">
                   {pending.map((team) => (
                     <PendingTeamRow
                       key={team.id}
@@ -403,256 +572,132 @@ export function OrganizerPage() {
                   ))}
                 </div>
               </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-400">
+                Новых заявок нет — всё разобрано 🎉
+              </div>
             )}
+          </div>
+        )}
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-gray-900">Одобренные команды</h3>
-                  <p className="text-xs text-gray-500">Мониторинг прогресса участников</p>
-                </div>
-                <button
-                  onClick={() => setIsAddingTeam(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-100"
-                >
-                  <Plus size={16} /> Добавить вручную
-                </button>
+        {detailTab === "teams" && (
+          <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="font-bold text-slate-900">Одобренные команды</h3>
+                <p className="text-xs text-slate-500">Мониторинг прогресса участников</p>
               </div>
-              <div className="divide-y divide-gray-50">
-                {approved.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm italic">
-                    Одобренных команд пока нет
-                  </div>
-                ) : (
-                  approved.map((team) => (
-                    <div
-                      key={team.id}
-                      className="p-4 hover:bg-gray-50/50 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center border border-blue-100">
-                          <Users size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-900">{team.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {team.members.length} участников · подано:{" "}
-                            {team.github_url ? "да" : "нет"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span
-                          className={cn(
-                            "px-2 py-1 rounded font-bold uppercase",
-                            team.github_url
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-50 text-gray-400",
-                          )}
-                        >
-                          {team.github_url ? "Проект сдан" : "В процессе"}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteTeam(team.id, team.name)}
-                          title="Удалить команду"
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              <button
+                onClick={() => setIsAddingTeam(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-200"
+              >
+                <Plus size={16} /> Добавить вручную
+              </button>
             </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Коллегия жюри</h3>
-                <button
-                  onClick={() => setIsAddingJury(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-sm font-bold rounded-lg hover:bg-blue-600 hover:text-white"
-                >
-                  <Plus size={16} /> Назначить
-                </button>
-              </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(assignedJury ?? []).map((j) => (
+            <div className="divide-y divide-slate-50">
+              {approved.length === 0 ? (
+                <div className="p-12 text-center text-sm italic text-slate-400">
+                  Одобренных команд пока нет
+                </div>
+              ) : (
+                approved.map((team) => (
                   <div
-                    key={j.id}
-                    className="p-4 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-100 group"
+                    key={team.id}
+                    className="flex items-center justify-between p-4 hover:bg-slate-50/50"
                   >
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border-2 border-white shadow-sm flex-shrink-0">
-                      {j.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-500">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">{team.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {team.members.length} участников · подано: {team.github_url ? "да" : "нет"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 text-sm truncate">{j.name}</p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {j.company ?? "—"} · {j.specialization ?? "—"}
-                      </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span
+                        className={cn(
+                          "rounded px-2 py-1 font-bold uppercase",
+                          team.github_url
+                            ? "bg-green-50 text-green-700"
+                            : "bg-slate-50 text-slate-400",
+                        )}
+                      >
+                        {team.github_url ? "Проект сдан" : "В процессе"}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteTeam(team.id, team.name)}
+                        title="Удалить команду"
+                        className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleUnassignJury(j.id)}
-                      title="Снять с хакатона"
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg flex-shrink-0"
-                    >
-                      <X size={16} />
-                    </button>
                   </div>
-                ))}
-                {(assignedJury ?? []).length === 0 && (
-                  <div className="col-span-full text-sm text-gray-400 italic text-center py-4">
-                    Жюри ещё не назначено
-                  </div>
-                )}
-              </div>
+                ))
+              )}
             </div>
           </div>
+        )}
 
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-              <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-50 pb-4">
-                <Settings size={18} className="text-blue-600" />
-                Критерии оценки жюри
-              </h4>
-              <p className="text-[11px] text-gray-400 -mt-1">
-                Авто-проверки фиксированы (40% итога). Жюри оценивает по этим критериям (60%);
-                веса — относительные.
-              </p>
-              <div className="space-y-3">
-                {criteria.map((c, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      value={c.label}
-                      onChange={(e) => updateCriterion(idx, { label: e.target.value })}
-                      placeholder="Название критерия"
-                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                    />
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={c.weight}
-                        onChange={(e) => updateCriterion(idx, { weight: Number(e.target.value) })}
-                        className="w-16 px-2 py-2 rounded-lg border border-gray-200 text-sm text-center focus:border-blue-500 outline-none"
-                      />
-                      <span className="text-xs text-gray-400">%</span>
-                    </div>
-                    <button
-                      onClick={() => removeCriterion(idx)}
-                      title="Удалить критерий"
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
-                {criteria.length === 0 && (
-                  <p className="text-xs text-gray-400">Критериев нет — добавьте первый.</p>
-                )}
+        {detailTab === "jury" && (
+          <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="font-bold text-slate-900">Коллегия жюри</h3>
+                <p className="text-xs text-slate-500">Эксперты, назначенные на этот хакатон</p>
               </div>
               <button
-                onClick={addCriterion}
-                className="w-full py-2 text-xs font-semibold text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50"
+                onClick={() => setIsAddingJury(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-600 hover:text-white"
               >
-                + Добавить критерий
+                <Plus size={16} /> Назначить
               </button>
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-[10px] text-gray-400 italic">
-                  Сумма весов: {criteria.reduce((a, c) => a + (c.weight || 0), 0)}%
-                </p>
-                <button
-                  onClick={handleSaveCriteria}
-                  disabled={!critDirty || busy}
-                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-40"
-                >
-                  Сохранить
-                </button>
-              </div>
             </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-              <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-50 pb-4">
-                <Settings size={18} className="text-blue-600" />
-                Структура презентации
-              </h4>
-              <p className="text-[11px] text-gray-400 -mt-1">
-                Разделы, наличие которых проверяется в презентации команд. Каждый раздел
-                ищется по ключевым словам (через запятую) в тексте слайдов.
-              </p>
-              <div className="space-y-3">
-                {sections.map((s, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <input
-                        value={s.label}
-                        onChange={(e) => updateSection(idx, { label: e.target.value })}
-                        placeholder="Название раздела"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                      />
-                      <input
-                        value={s.keywords.join(", ")}
-                        onChange={(e) =>
-                          updateSection(idx, { keywords: e.target.value.split(",").map((k) => k.trimStart()) })
-                        }
-                        placeholder="ключевые слова: проблема, problem"
-                        className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 focus:border-blue-500 outline-none"
-                      />
-                    </div>
-                    <button
-                      onClick={() => removeSection(idx)}
-                      title="Удалить раздел"
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+            <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
+              {juryList.map((j) => (
+                <div
+                  key={j.id}
+                  className="group flex items-center gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4"
+                >
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 border-white bg-blue-100 font-bold text-blue-600 shadow-sm">
+                    {j.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </div>
-                ))}
-                {sections.length === 0 && (
-                  <p className="text-xs text-gray-400">Разделов нет — добавьте первый.</p>
-                )}
-              </div>
-              <button
-                onClick={addSection}
-                className="w-full py-2 text-xs font-semibold text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50"
-              >
-                + Добавить раздел
-              </button>
-              <div className="flex items-center justify-end pt-1">
-                <button
-                  onClick={handleSaveSections}
-                  disabled={!secDirty || busy}
-                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-40"
-                >
-                  Сохранить
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-              <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                <BarChart size={18} className="text-blue-600" />
-                Быстрая статистика
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-gray-50 rounded-xl text-center">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase">Заявок</p>
-                  <p className="text-lg font-black text-gray-900">{teams.length}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-slate-900">{j.name}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {j.company ?? "—"} · {j.specialization ?? "—"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleUnassignJury(j.id)}
+                    title="Снять с хакатона"
+                    className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-xl text-center">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase">Подано</p>
-                  <p className="text-lg font-black text-green-600">
-                    {approved.filter((t) => t.github_url).length}
-                  </p>
+              ))}
+              {juryList.length === 0 && (
+                <div className="col-span-full py-4 text-center text-sm italic text-slate-400">
+                  Жюри ещё не назначено
                 </div>
-              </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {detailTab === "settings" && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {criteriaCard}
+            {sectionsCard}
+          </div>
+        )}
 
         {isAddingTeam && (
           <Modal onClose={() => setIsAddingTeam(false)} title="Добавить команду">
@@ -716,9 +761,7 @@ export function OrganizerPage() {
 
               {juryMode === "existing" && (
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">
-                    Существующее жюри
-                  </label>
+                  <label className="text-sm font-semibold text-gray-700">Существующее жюри</label>
                   <select
                     value={newJuryId}
                     onChange={(e) => setNewJuryId(e.target.value ? Number(e.target.value) : "")}
@@ -811,23 +854,23 @@ export function OrganizerPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Панель организатора</h1>
-          <p className="text-gray-500">Управление мероприятиями, жюри и коэффициентами оценки.</p>
+          <h1 className="text-3xl font-bold text-slate-900">Панель организатора</h1>
+          <p className="text-slate-500">Управление мероприятиями, жюри и критериями оценки.</p>
         </div>
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 md:w-auto"
         >
           <PlusCircle size={20} />
           Создать хакатон
         </button>
       </div>
 
-      <div className="flex border-b border-gray-200 overflow-x-auto">
+      <div className="flex overflow-x-auto border-b border-slate-200">
         {(
           [
             { id: "events", label: "Мероприятия" },
@@ -839,10 +882,10 @@ export function OrganizerPage() {
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={cn(
-              "px-6 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap",
+              "whitespace-nowrap border-b-2 px-6 py-4 text-sm font-bold transition-all",
               activeTab === t.id
                 ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-400 hover:text-gray-600",
+                : "border-transparent text-slate-400 hover:text-slate-600",
             )}
           >
             {t.label}
@@ -851,45 +894,45 @@ export function OrganizerPage() {
       </div>
 
       {activeTab === "events" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {(hackathons ?? []).map((h) => (
             <div
               key={h.id}
               onClick={() => setSelectedHackathon(h.id)}
-              className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:border-blue-200 hover:shadow-md transition-all cursor-pointer"
+              className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10"
             >
-              <div className="p-6 space-y-4">
+              <div className="space-y-4 p-6">
                 <div className="flex items-start justify-between">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
                     <Trophy size={24} />
                   </div>
                   <span
                     className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                      "rounded-full px-3 py-1 text-[10px] font-bold uppercase",
                       h.status === "active"
                         ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500",
+                        : "bg-slate-100 text-slate-500",
                     )}
                   >
                     {h.status === "active" ? "Запущен" : h.status}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600">
+                  <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600">
                     {h.title}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{h.description}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">{h.description}</p>
                 </div>
                 <div className="flex items-center gap-6 pt-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
                     <Users size={16} />
-                    <span className="font-semibold text-gray-700">{h.teams_count}</span>
+                    <span className="font-semibold text-slate-700">{h.teams_count}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
                     <UserCheck size={16} />
-                    <span className="font-semibold text-gray-700">{h.jury_count}</span>
+                    <span className="font-semibold text-slate-700">{h.jury_count}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400 ml-auto">
+                  <div className="ml-auto flex items-center gap-2 text-sm text-slate-400">
                     <Clock size={16} />
                     <span className="text-[10px] font-bold">
                       до {new Date(h.submission_deadline).toLocaleDateString("ru-RU")}
@@ -897,14 +940,17 @@ export function OrganizerPage() {
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between">
+              <div className="flex items-center justify-between border-t border-slate-50 bg-slate-50/50 px-6 py-4">
                 <span className="text-xs font-bold text-blue-600">Управление хакатоном</span>
-                <ChevronRight size={18} className="text-blue-400 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight
+                  size={18}
+                  className="text-blue-400 transition-transform group-hover:translate-x-1"
+                />
               </div>
             </div>
           ))}
           {hackathons && hackathons.length === 0 && (
-            <div className="col-span-full bg-white p-12 text-center rounded-2xl border border-gray-100 text-gray-500 text-sm">
+            <div className="col-span-full rounded-2xl border border-slate-100 bg-white p-12 text-center text-sm text-slate-500">
               Создайте первый хакатон.
             </div>
           )}
@@ -912,10 +958,10 @@ export function OrganizerPage() {
       )}
 
       {activeTab === "analytics" && (
-        <div className="space-y-8 animate-in zoom-in-95 duration-300">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="space-y-6 rounded-2xl border border-slate-200/70 bg-white p-8 shadow-sm lg:col-span-2">
+              <h3 className="flex items-center gap-2 font-bold text-slate-900">
                 <TrendingUp size={20} className="text-blue-600" />
                 Активность участия по мероприятиям
               </h3>
@@ -949,9 +995,9 @@ export function OrganizerPage() {
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-              <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                <Trophy size={20} className="text-yellow-500" />
+            <div className="space-y-6 rounded-2xl border border-slate-200/70 bg-white p-8 shadow-sm">
+              <h3 className="flex items-center gap-2 font-bold text-slate-900">
+                <Trophy size={20} className="text-amber-500" />
                 Сводка
               </h3>
               <div className="space-y-4">
@@ -966,66 +1012,64 @@ export function OrganizerPage() {
       )}
 
       {activeTab === "members" && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Список экспертов (Жюри)</h3>
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 p-6">
+            <h3 className="font-bold text-slate-900">Список экспертов (Жюри)</h3>
           </div>
           <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[640px]">
-            <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-              <tr>
-                <th className="px-6 py-4">Имя / Компания</th>
-                <th className="px-6 py-4">Специализация</th>
-                <th className="px-6 py-4">Email</th>
-                <th className="px-6 py-4">Статус</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {(juryPool ?? [])
-                .filter((j) => j.role !== "participant")
-                .map((j) => (
-                  <tr key={j.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                          {j.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
+            <table className="w-full min-w-[640px] text-left">
+              <thead className="bg-slate-50 text-xs font-bold uppercase text-slate-500">
+                <tr>
+                  <th className="px-6 py-4">Имя / Компания</th>
+                  <th className="px-6 py-4">Специализация</th>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">Статус</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {(juryPool ?? [])
+                  .filter((j) => j.role !== "participant")
+                  .map((j) => (
+                    <tr key={j.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                            {j.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{j.name}</p>
+                            <p className="text-xs text-slate-500">{j.company ?? "—"}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900">{j.name}</p>
-                          <p className="text-xs text-gray-500">{j.company ?? "—"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {j.specialization ?? "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{j.email}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-                          j.role === "organizer"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700",
-                        )}
-                      >
-                        {j.role === "organizer" ? "Организатор" : "Доступен"}
-                      </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{j.specialization ?? "—"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{j.email}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={cn(
+                            "rounded px-2 py-0.5 text-[10px] font-bold uppercase",
+                            j.role === "organizer"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-green-100 text-green-700",
+                          )}
+                        >
+                          {j.role === "organizer" ? "Организатор" : "Доступен"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                {juryPool && juryPool.filter((j) => j.role !== "participant").length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center text-sm italic text-slate-400">
+                      Пока нет пользователей с ролью жюри или организатора.
                     </td>
                   </tr>
-                ))}
-              {juryPool && juryPool.filter((j) => j.role !== "participant").length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-12 text-center text-gray-400 text-sm italic">
-                    Пока нет пользователей с ролью жюри или организатора.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1069,9 +1113,7 @@ export function OrganizerPage() {
                 <input
                   type="datetime-local"
                   value={newHack.submission_deadline}
-                  onChange={(e) =>
-                    setNewHack({ ...newHack, submission_deadline: e.target.value })
-                  }
+                  onChange={(e) => setNewHack({ ...newHack, submission_deadline: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
                 />
               </Field>
@@ -1100,9 +1142,7 @@ export function OrganizerPage() {
                   min={2}
                   max={10}
                   value={newHack.max_team_size}
-                  onChange={(e) =>
-                    setNewHack({ ...newHack, max_team_size: Number(e.target.value) })
-                  }
+                  onChange={(e) => setNewHack({ ...newHack, max_team_size: Number(e.target.value) })}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
                 />
               </Field>
@@ -1170,6 +1210,29 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function StatCard({
+  label,
+  value,
+  tone = "slate",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "slate" | "amber" | "green" | "blue";
+}) {
+  const tones: Record<string, string> = {
+    slate: "text-slate-900",
+    amber: "text-amber-600",
+    green: "text-green-600",
+    blue: "text-blue-600",
+  };
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className={cn("mt-1 text-2xl font-black", tones[tone])}>{value}</p>
+    </div>
+  );
+}
+
 function PendingTeamRow({
   team,
   onApprove,
@@ -1182,14 +1245,14 @@ function PendingTeamRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col justify-between gap-4 p-6 md:flex-row md:items-center">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-white rounded-2xl border border-yellow-200 flex items-center justify-center font-bold text-yellow-600 shadow-sm">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-white font-bold text-amber-600 shadow-sm">
           {team.name[0]}
         </div>
         <div>
-          <p className="font-bold text-gray-900">{team.name}</p>
-          <p className="text-xs text-gray-500">
+          <p className="font-bold text-slate-900">{team.name}</p>
+          <p className="text-xs text-slate-500">
             Подано: {team.applied_at ? new Date(team.applied_at).toLocaleDateString("ru-RU") : "—"} ·{" "}
             {team.members.length} участников
           </p>
@@ -1198,14 +1261,14 @@ function PendingTeamRow({
       <div className="flex items-center gap-3">
         <button
           onClick={onReject}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-red-100 text-red-600 text-sm font-bold rounded-xl hover:bg-red-50"
+          className="flex items-center gap-2 rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50"
         >
           <XCircle size={18} />
           Отклонить
         </button>
         <button
           onClick={onApprove}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200"
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700"
         >
           <ShieldCheck size={18} />
           Одобрить участие
@@ -1213,7 +1276,7 @@ function PendingTeamRow({
         <button
           onClick={onDelete}
           title="Удалить команду"
-          className="p-2 text-red-500 hover:bg-red-50 rounded-xl"
+          className="rounded-xl p-2 text-red-500 hover:bg-red-50"
         >
           <Trash2 size={18} />
         </button>
